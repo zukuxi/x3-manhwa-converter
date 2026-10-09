@@ -27,3 +27,6 @@ A browser-based JPG/PNG manga folder to Xteink X3 XTC/XTCH converter.
 - 不再把每张 JPG 独立切页；每章内的图片按自然顺序纵向连续拼接，再切成 528×792 页面。
 - 图片之间不会强行插入白页；只有整章/整本最后一页不足 792 像素时，才在末尾补白。
 - 采用逐段绘制的流式拼接方式，不创建整章超长大画布，以减少内存峰值。
+
+
+https://zukuxi.github.io/x3-manhwa-converter/

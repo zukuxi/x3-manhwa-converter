@@ -1,4 +1,4 @@
-// X3 Manga Image Converter V2. Local-only browser processing.
+// X3 Manga Image Converter V2.2. Local-only browser processing; stitch vertical strips across source images.
 const W=528,H=792,$=id=>document.getElementById(id);
 let cancelled=false, selectedFiles=[];
 const folderInput=$('folder'), filesInput=$('files'), go=$('go'), cancel=$('cancel'), status=$('status'), bar=$('bar'), preview=$('preview');
@@ -26,15 +26,47 @@ function chapterOf(f){const p=pathOf(f).split('/');return p.length>=3?p[1]:(p.le
 function getChapters(){return [...new Set(selectedFiles.filter(f=>!isRootCover(f)).map(chapterOf))].sort((a,b)=>collator.compare(a,b))}
 function fillChapterChoices(){const chapters=getChapters();for(const id of ['fromChapter','toChapter']){const el=$(id),old=el.value;el.innerHTML='';chapters.forEach(ch=>{const o=document.createElement('option');o.value=ch;o.textContent=ch;el.appendChild(o)});if(chapters.includes(old))el.value=old;}if(chapters.length){$('fromChapter').value=chapters[0];$('toChapter').value=chapters[chapters.length-1]}}
 function getOrderedFiles(){const all=selectedFiles.slice().sort((a,b)=>collator.compare(pathOf(a),pathOf(b))),i=all.findIndex(isRootCover);let cover=null;if(i>=0)cover=all.splice(i,1)[0];return $('includeCover').checked&&cover?[cover,...all]:all}
-function renderFileStatus(){const cover=selectedFiles.find(isRootCover),chapters=getChapters();$('fileStatus').textContent='已读取 '+selectedFiles.length+' 张图片，识别到 '+chapters.length+' 个章节文件夹。\n'+(cover?'找到根目录 Cover.jpg。'+($('includeCover').checked?'将放在整部合并模式的第一页。':'封面不会加入。'):'未找到根目录 Cover.jpg。')+'\n章节和图片按自然数字顺序排列。';go.disabled=!getOrderedFiles().length;}
-function updateModeUI(){const mode=$('outputMode').value; $('rangeFields').style.display=mode==='range'?'flex':'none';$('zipFields').style.display=mode==='chapter'?'block':'none';$('modeHint').textContent=mode==='merge'?'所有图片合并为一个 XTC/XTCH 文件。':mode==='chapter'?'每个章节文件夹单独生成一本；可按每 5 本或 10 本打包 ZIP。':'选择起止章节，将范围内章节合并为一本。';}
+function renderFileStatus(){const cover=selectedFiles.find(isRootCover),chapters=getChapters();$('fileStatus').textContent='已读取 '+selectedFiles.length+' 张图片，识别到 '+chapters.length+' 个章节文件夹。\n'+(chapters.length===1&&chapters[0]==='未分章图片'?'⚠ 未能识别章节路径，分章模式不可用。请检查目录结构或更换浏览器。\n':'')+(cover?'找到根目录 Cover.jpg。'+($('includeCover').checked?'将放在整部合并模式的第一页。':'封面不会加入。'):'未找到根目录 Cover.jpg。')+'\n章节和图片按自然数字顺序排列。';go.disabled=!getOrderedFiles().length;}
+function updateModeUI(){const mode=$('outputMode').value; $('rangeFields').style.display=mode==='range'?'flex':'none';$('zipFields').style.display=mode==='chapter'?'block':'none';$('modeHint').textContent=mode==='merge'?'整部合并：所有章节图片会合并成一个 XTC/XTCH 文件。':mode==='chapter'?'分章模式：每个章节文件夹单独生成一本；默认每 5 本打包一个 ZIP。开始前请确认识别到的章节数量正确。':'范围模式：选择起止章节，将范围内章节合并为一本。';}
 function setStatus(s,p){status.textContent=s;if(p!=null)bar.style.width=Math.max(0,Math.min(100,p))+'%'}
 function safeName(s){return (s||'漫画').replace(/[\\/:*?"<>|]/g,'_').trim()||'漫画'}
 function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000)}
 function yieldUI(){return new Promise(r=>setTimeout(r,0))}
-function getGroups(){const mode=$('outputMode').value,files=getOrderedFiles(),chapters=getChapters();if(mode==='merge')return [{name:safeName($('bookTitle').value||'漫画'),files}];if(mode==='range'){let a=chapters.indexOf($('fromChapter').value),b=chapters.indexOf($('toChapter').value);if(a<0||b<0)throw new Error('请先选择起止章节。');if(a>b)[a,b]=[b,a];const chosen=new Set(chapters.slice(a,b+1));return [{name:safeName($('bookTitle').value||'漫画')+'_'+safeName(chapters[a])+'-'+safeName(chapters[b]),files:files.filter(f=>!isRootCover(f)&&chosen.has(chapterOf(f)))}]}
+function getGroups(){const mode=$('outputMode').value,files=getOrderedFiles(),chapters=getChapters();if((mode==='chapter'||mode==='range')&&(chapters.length===0||(chapters.length===1&&chapters[0]==='未分章图片')))throw new Error('没有识别到章节文件夹。请重新选择包含各章节子文件夹的漫画总文件夹，并确认上方显示的章节数量；若仍失败，请尝试 Chrome 浏览器。');if(mode==='merge')return [{name:safeName($('bookTitle').value||'漫画'),files}];if(mode==='range'){let a=chapters.indexOf($('fromChapter').value),b=chapters.indexOf($('toChapter').value);if(a<0||b<0)throw new Error('请先选择起止章节。');if(a>b)[a,b]=[b,a];const chosen=new Set(chapters.slice(a,b+1));return [{name:safeName($('bookTitle').value||'漫画')+'_'+safeName(chapters[a])+'-'+safeName(chapters[b]),files:files.filter(f=>!isRootCover(f)&&chosen.has(chapterOf(f)))}]}
  const map=new Map();for(const f of files){if(isRootCover(f))continue;const ch=chapterOf(f);if(!map.has(ch))map.set(ch,[]);map.get(ch).push(f)}const entries=[...map.entries()].sort((a,b)=>collator.compare(a[0],b[0]));return entries.map(([name,fs])=>({name:safeName(name),files:fs}));}
-async function makeBook(group,depth,algo,bookTitle,onProgress){const pages=[];let planned=0;for(const f of group.files){if(cancelled)throw new Error('已取消');const im=await loadImage(f);planned+=Math.max(1,Math.ceil(im.naturalHeight*W/im.naturalWidth/H));im.src='';await yieldUI()}let done=0;for(const f of group.files){if(cancelled)throw new Error('已取消');const img=await loadImage(f),scaledH=Math.max(1,Math.ceil(img.naturalHeight*W/img.naturalWidth));for(let top=0;top<scaledH;top+=H){if(cancelled)throw new Error('已取消');const canvas=stripCanvas(img,top,scaledH),gray=canvasToGray(canvas),processed=dither(gray,W,H,algo,depth);pages.push(depth===2?packXTH(processed,W,H):packXTG(processed,W,H));if(!preview.dataset.shown){preview.src=canvas.toDataURL('image/png');preview.style.display='block';preview.dataset.shown='1'}canvas.width=1;canvas.height=1;done++;onProgress?.(done,planned,f);if(done%2===0)await yieldUI()}img.src=''}const data=buildBook(pages,depth===2,bookTitle);return {data,pages:pages.length,files:group.files.length};}
+async function makeBook(group,depth,algo,bookTitle,onProgress){
+ const pages=[];let planned=0;
+ // First pass counts pages from the combined vertical stream, not per source image.
+ for(const f of group.files){if(cancelled)throw new Error('已取消');const im=await loadImage(f);planned+=Math.max(1,Math.ceil(im.naturalHeight*W/im.naturalWidth));im.src='';await yieldUI()}
+ planned=Math.max(1,Math.ceil(planned/H));
+ let done=0,cursorY=0,canvas,ctx,currentFile=group.files[0];
+ function newPage(){canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);cursorY=0}
+ async function emitPage(file){
+  const gray=canvasToGray(canvas),processed=dither(gray,W,H,algo,depth);
+  pages.push(depth===2?packXTH(processed,W,H):packXTG(processed,W,H));
+  if(!preview.dataset.shown){preview.src=canvas.toDataURL('image/png');preview.style.display='block';preview.dataset.shown='1'}
+  done++;onProgress?.(done,planned,file||currentFile);canvas.width=1;canvas.height=1;newPage();
+  if(done%2===0)await yieldUI();
+ }
+ newPage();
+ // Stream each scaled image into the current page. A page can contain the tail
+ // of one JPG and the beginning of the next, without allocating a giant canvas.
+ for(const f of group.files){
+  if(cancelled)throw new Error('已取消');currentFile=f;const img=await loadImage(f);
+  const scaledH=Math.max(1,Math.ceil(img.naturalHeight*W/img.naturalWidth));let offset=0;
+  while(offset<scaledH){
+   if(cancelled)throw new Error('已取消');const chunk=Math.min(H-cursorY,scaledH-offset);
+   const srcY=offset*img.naturalHeight/scaledH,srcH=chunk*img.naturalHeight/scaledH;
+   ctx.drawImage(img,0,srcY,img.naturalWidth,srcH,0,cursorY,W,chunk);
+   cursorY+=chunk;offset+=chunk;
+   if(cursorY===H)await emitPage(f);
+  }
+  img.src='';await yieldUI();
+ }
+ // Only the very end of the whole chapter/book may have a white remainder.
+ if(cursorY>0||pages.length===0)await emitPage(currentFile);
+ const data=buildBook(pages,depth===2,bookTitle);return {data,pages:pages.length,files:group.files.length};
+}
 
 function dither(gray,w,h,mode,depth){const a=new Float32Array(gray);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x,old=a[i],v=depth===2?(old<42?0:old<127?85:old<212?170:255):(mode==='none'?(old<128?0:255):(old<128?0:255));a[i]=v;if(mode==='none')continue;const e=old-v;if(mode==='atkinson'){const add=(xx,yy,k=1)=>{if(xx>=0&&xx<w&&yy<h)a[yy*w+xx]+=e*k/8};add(x+1,y);add(x+2,y);add(x-1,y+1);add(x,y+1);add(x+1,y+1);add(x,y+2)}else{const add=(xx,yy,k)=>{if(xx>=0&&xx<w&&yy<h)a[yy*w+xx]+=e*k/16};add(x+1,y,7);add(x-1,y+1,3);add(x,y+1,5);add(x+1,y+1,1)}}return Uint8Array.from(a,v=>Math.max(0,Math.min(255,Math.round(v))))}
 function packXTG(px,w,h){const rb=Math.ceil(w/8),data=new Uint8Array(rb*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(px[y*w+x]>=128)data[y*rb+(x>>3)]|=0x80>>(x&7);return makePage('XTG\0',w,h,data)}
@@ -44,7 +76,6 @@ function md5(input){const K=new Uint32Array(64),S=[7,12,17,22,5,9,14,20,4,11,16,
 function buildBook(pages,is2,title){if(pages.length>65535)throw new Error('页面数量超过 XTC 容器可表示的上限（65535 页）。');const metaOff=56,indexOff=312,dataOff=indexOff+pages.length*16,total=dataOff+pages.reduce((n,p)=>n+p.length,0),out=new Uint8Array(total),v=new DataView(out.buffer),magic=is2?'XTCH':'XTC\0';for(let i=0;i<4;i++)out[i]=magic.charCodeAt(i);v.setUint16(4,1,true);v.setUint16(6,pages.length,true);v.setUint32(8,0x01000100,true);v.setUint32(12,1,true);v.setBigUint64(16,BigInt(metaOff),true);v.setBigUint64(24,BigInt(indexOff),true);v.setBigUint64(32,BigInt(dataOff),true);v.setBigUint64(40,0n,true);v.setBigUint64(48,0n,true);out.set(new TextEncoder().encode(title).slice(0,127),metaOff);let pos=dataOff;pages.forEach((p,i)=>{const e=indexOff+i*16;v.setBigUint64(e,BigInt(pos),true);v.setUint32(e+8,p.length,true);v.setUint16(e+12,W,true);v.setUint16(e+14,H,true);out.set(p,pos);pos+=p.length});return out}
 function loadImage(file){return new Promise((resolve,reject)=>{const url=URL.createObjectURL(file),img=new Image();img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('无法读取图片：'+file.name))};img.src=url})}
 function canvasToGray(canvas){const ctx=canvas.getContext('2d',{willReadFrequently:true}),im=ctx.getImageData(0,0,W,H),gray=new Uint8Array(W*H);for(let i=0,j=0;i<im.data.length;i+=4,j++)gray[j]=Math.round(.299*im.data[i]+.587*im.data[i+1]+.114*im.data[i+2]);return gray}
-function stripCanvas(img,top,scaledH){const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.drawImage(img,0,-top,W,scaledH);return canvas}
 
 go.addEventListener('click',async()=>{
  if(!selectedFiles.length)return;cancelled=false;go.disabled=true;cancel.disabled=false;preview.style.display='none';delete preview.dataset.shown;bar.style.width='0%';

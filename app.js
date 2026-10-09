@@ -1,25 +1,27 @@
-// X3 Manga Image Converter V2.6. Local-only browser processing; stitch vertical strips across source images.
+// X3 Manga Image Converter V2.7. Live converted preview before conversion starts.
 const W=528,H=792,$=id=>document.getElementById(id);
-let cancelled=false, selectedFiles=[];
+let cancelled=false, selectedFiles=[], previewRequest=0;
 const folderInput=$('folder'), filesInput=$('files'), go=$('go'), cancel=$('cancel'), status=$('status'), bar=$('bar'), preview=$('preview');
 const collator=new Intl.Collator('zh-CN',{numeric:true,sensitivity:'base'}), imageExt=/\.(jpe?g|png|webp|bmp|gif|avif)$/i;
 $('pickFolder').addEventListener('click',()=>folderInput.click());
 $('pickFiles').addEventListener('click',()=>filesInput.click());
 folderInput.addEventListener('change',()=>{if(folderInput.files?.length)acceptFiles(Array.from(folderInput.files),true)});
 filesInput.addEventListener('change',()=>{if(filesInput.files?.length)acceptFiles(Array.from(filesInput.files),false)});
-$('includeCover').addEventListener('change',renderFileStatus);
-$('outputMode').addEventListener('change',updateModeUI);
+$('includeCover').addEventListener('change',()=>{renderFileStatus();renderLivePreview()});
+$('outputMode').addEventListener('change',()=>{updateModeUI();renderLivePreview()});
+$('depth').addEventListener('change',renderLivePreview);
+$('dither').addEventListener('change',renderLivePreview);
 $('zipBatch').addEventListener('change',updateModeUI);
-$('fromChapter').addEventListener('change',updateModeUI); $('toChapter').addEventListener('change',updateModeUI);
+$('fromChapter').addEventListener('change',()=>{updateModeUI();renderLivePreview()}); $('toChapter').addEventListener('change',()=>{updateModeUI();renderLivePreview()});
 cancel.addEventListener('click',()=>{cancelled=true;cancel.disabled=true;status.textContent+='\n正在取消…'});
 function pathOf(f){return f.webkitRelativePath||f.name}
 function isImage(f){return imageExt.test(f.name)&&(!f.type||f.type.startsWith('image/'))}
 function acceptFiles(files,fromFolder){
  selectedFiles=files.filter(isImage).sort((a,b)=>collator.compare(pathOf(a),pathOf(b)));
- if(!selectedFiles.length){$('fileStatus').textContent='没有找到支持的图片。请确认文件夹中有 JPG、PNG、WebP 等图片。';go.disabled=true;return}
+ if(!selectedFiles.length){$('fileStatus').textContent='没有找到支持的图片。请确认文件夹中有 JPG、PNG、WebP 等图片。';go.disabled=true;preview.style.display='none';return}
  const parts=pathOf(selectedFiles[0]).split('/');
  $('bookTitle').value=(fromFolder&&parts.length>1?parts[0]:selectedFiles[0].name.replace(/\.[^.]+$/,''))||'漫画';
- preview.style.display='none'; fillChapterChoices(); renderFileStatus(); updateModeUI();
+ fillChapterChoices(); renderFileStatus(); updateModeUI(); renderLivePreview();
 }
 function isRootCover(f){const p=pathOf(f).split('/');return p[p.length-1].toLowerCase()==='cover.jpg'&&p.length===2}
 function chapterOf(f){const p=pathOf(f).split('/');return p.length>=3?p[1]:(p.length===2&&p[1].toLowerCase()!=='cover.jpg'?p[0]:'未分章图片')}
@@ -140,6 +142,33 @@ function md5(input){const K=new Uint32Array(64),S=[7,12,17,22,5,9,14,20,4,11,16,
 function buildBook(pages,is2,title){if(pages.length>65535)throw new Error('页面数量超过 XTC 容器可表示的上限（65535 页）。');const metaOff=56,indexOff=312,dataOff=indexOff+pages.length*16,total=dataOff+pages.reduce((n,p)=>n+p.length,0),out=new Uint8Array(total),v=new DataView(out.buffer),magic=is2?'XTCH':'XTC\0';for(let i=0;i<4;i++)out[i]=magic.charCodeAt(i);v.setUint16(4,1,true);v.setUint16(6,pages.length,true);v.setUint32(8,0x01000100,true);v.setUint32(12,1,true);v.setBigUint64(16,BigInt(metaOff),true);v.setBigUint64(24,BigInt(indexOff),true);v.setBigUint64(32,BigInt(dataOff),true);v.setBigUint64(40,0n,true);v.setBigUint64(48,0n,true);out.set(new TextEncoder().encode(title).slice(0,127),metaOff);let pos=dataOff;pages.forEach((p,i)=>{const e=indexOff+i*16;v.setBigUint64(e,BigInt(pos),true);v.setUint32(e+8,p.length,true);v.setUint16(e+12,W,true);v.setUint16(e+14,H,true);out.set(p,pos);pos+=p.length});return out}
 function loadImage(file){return new Promise((resolve,reject)=>{const url=URL.createObjectURL(file),img=new Image();img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('无法读取图片：'+file.name))};img.src=url})}
 function canvasToGray(canvas){const ctx=canvas.getContext('2d',{willReadFrequently:true}),im=ctx.getImageData(0,0,W,H),gray=new Uint8Array(W*H);for(let i=0,j=0;i<im.data.length;i+=4,j++)gray[j]=Math.round(.299*im.data[i]+.587*im.data[i+1]+.114*im.data[i+2]);return gray}
+async function renderLivePreview(){
+ const request=++previewRequest;
+ if(!selectedFiles.length){preview.style.display='none';return}
+ const depth=Number($('depth').value),algo=$('dither').value;
+ let canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+ let ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+ try{
+  const groups=getGroups().filter(g=>g.files.length);if(!groups.length){preview.style.display='none';return}
+  const group=groups[0],chapter=(group.chapters&&group.chapters.length)?group.chapters[0]:{files:group.files};
+  let cursorY=0;
+  for(const file of chapter.files){
+   if(request!==previewRequest)return;
+   const img=await loadImage(file);if(request!==previewRequest){img.src='';return}
+   const scaledHeight=Math.max(1,Math.round(img.naturalHeight*W/img.naturalWidth));let offset=0;
+   while(offset<scaledHeight&&cursorY<H){
+    if(request!==previewRequest){img.src='';return}
+    const chunk=Math.min(H-cursorY,scaledHeight-offset);
+    const sourceY=offset*img.naturalHeight/scaledHeight,sourceEnd=(offset+chunk)*img.naturalHeight/scaledHeight;
+    ctx.drawImage(img,0,sourceY,img.naturalWidth,sourceEnd-sourceY,0,cursorY,W,chunk);
+    cursorY+=chunk;offset+=chunk;updateConvertedPreview(canvas,depth,algo);
+    await yieldUI();
+   }
+   img.src='';if(cursorY>=H)break;
+  }
+ }catch(e){if(request===previewRequest){console.warn('预览生成失败：',e);preview.style.display='none'}}
+}
+
 function updateConvertedPreview(sourceCanvas, depth, algo){
  const gray=canvasToGray(sourceCanvas),processed=dither(gray,W,H,algo,depth);
  const out=document.createElement('canvas');out.width=W;out.height=H;
@@ -149,7 +178,7 @@ function updateConvertedPreview(sourceCanvas, depth, algo){
 }
 
 go.addEventListener('click',async()=>{
- if(!selectedFiles.length)return;cancelled=false;go.disabled=true;cancel.disabled=false;preview.style.display='none';delete preview.dataset.shown;bar.style.width='0%';
+ if(!selectedFiles.length)return;cancelled=false;previewRequest++;go.disabled=true;cancel.disabled=false;bar.style.width='0%';
  const depth=Number($('depth').value),algo=$('dither').value,mode=$('outputMode').value,batch=$('zipBatch').value;
  try{
   if(mode==='chapter'&&typeof JSZip==='undefined')throw new Error('ZIP 组件加载失败，请检查网络后刷新页面。');

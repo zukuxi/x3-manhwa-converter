@@ -1,4 +1,4 @@
-// X3 Manga Image Converter V2.5. Local-only browser processing; stitch vertical strips across source images.
+// X3 Manga Image Converter V2.6. Local-only browser processing; stitch vertical strips across source images.
 const W=528,H=792,$=id=>document.getElementById(id);
 let cancelled=false, selectedFiles=[];
 const folderInput=$('folder'), filesInput=$('files'), go=$('go'), cancel=$('cancel'), status=$('status'), bar=$('bar'), preview=$('preview');
@@ -95,9 +95,6 @@ async function makeBook(group, depth, algo, bookTitle, onProgress) {
     const gray = canvasToGray(canvas);
     const processed = dither(gray, W, H, algo, depth);
     pages.push(depth === 2 ? packXTH(processed, W, H) : packXTG(processed, W, H));
-    if (!preview.dataset.shown) {
-      preview.src = canvas.toDataURL('image/png'); preview.style.display = 'block'; preview.dataset.shown = '1';
-    }
     done++; onProgress?.(done, planned, file || currentFile);
     canvas.width = 1; canvas.height = 1; newPage();
     if (done % 2 === 0) await yieldUI();
@@ -119,6 +116,8 @@ async function makeBook(group, depth, algo, bookTitle, onProgress) {
         const sourceEnd = (offset + chunk) * img.naturalHeight / scaledHeight;
         ctx.drawImage(img, 0, sourceY, img.naturalWidth, sourceEnd - sourceY,
           0, cursorY, W, chunk);
+        // 第一段图像放入页面后立即显示预览，并按实际输出灰阶/抖动方式处理。
+        if (pages.length === 0) updateConvertedPreview(canvas, depth, algo);
         cursorY += chunk; offset += chunk;
         if (cursorY === H) await emitPage(file);
       }
@@ -141,6 +140,13 @@ function md5(input){const K=new Uint32Array(64),S=[7,12,17,22,5,9,14,20,4,11,16,
 function buildBook(pages,is2,title){if(pages.length>65535)throw new Error('页面数量超过 XTC 容器可表示的上限（65535 页）。');const metaOff=56,indexOff=312,dataOff=indexOff+pages.length*16,total=dataOff+pages.reduce((n,p)=>n+p.length,0),out=new Uint8Array(total),v=new DataView(out.buffer),magic=is2?'XTCH':'XTC\0';for(let i=0;i<4;i++)out[i]=magic.charCodeAt(i);v.setUint16(4,1,true);v.setUint16(6,pages.length,true);v.setUint32(8,0x01000100,true);v.setUint32(12,1,true);v.setBigUint64(16,BigInt(metaOff),true);v.setBigUint64(24,BigInt(indexOff),true);v.setBigUint64(32,BigInt(dataOff),true);v.setBigUint64(40,0n,true);v.setBigUint64(48,0n,true);out.set(new TextEncoder().encode(title).slice(0,127),metaOff);let pos=dataOff;pages.forEach((p,i)=>{const e=indexOff+i*16;v.setBigUint64(e,BigInt(pos),true);v.setUint32(e+8,p.length,true);v.setUint16(e+12,W,true);v.setUint16(e+14,H,true);out.set(p,pos);pos+=p.length});return out}
 function loadImage(file){return new Promise((resolve,reject)=>{const url=URL.createObjectURL(file),img=new Image();img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('无法读取图片：'+file.name))};img.src=url})}
 function canvasToGray(canvas){const ctx=canvas.getContext('2d',{willReadFrequently:true}),im=ctx.getImageData(0,0,W,H),gray=new Uint8Array(W*H);for(let i=0,j=0;i<im.data.length;i+=4,j++)gray[j]=Math.round(.299*im.data[i]+.587*im.data[i+1]+.114*im.data[i+2]);return gray}
+function updateConvertedPreview(sourceCanvas, depth, algo){
+ const gray=canvasToGray(sourceCanvas),processed=dither(gray,W,H,algo,depth);
+ const out=document.createElement('canvas');out.width=W;out.height=H;
+ const ctx=out.getContext('2d'),im=ctx.createImageData(W,H);
+ for(let i=0,j=0;i<processed.length;i++,j+=4){const v=processed[i];im.data[j]=v;im.data[j+1]=v;im.data[j+2]=v;im.data[j+3]=255;}
+ ctx.putImageData(im,0,0);preview.src=out.toDataURL('image/png');preview.style.display='block';preview.dataset.shown='1';
+}
 
 go.addEventListener('click',async()=>{
  if(!selectedFiles.length)return;cancelled=false;go.disabled=true;cancel.disabled=false;preview.style.display='none';delete preview.dataset.shown;bar.style.width='0%';

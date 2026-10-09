@@ -1,4 +1,4 @@
-// X3 Manga Image Converter V2.7. Live converted preview before conversion starts.
+// X3 Manga Image Converter V2.8. Live converted preview before conversion starts.
 const W=528,H=792,$=id=>document.getElementById(id);
 let cancelled=false, selectedFiles=[], previewRequest=0;
 const folderInput=$('folder'), filesInput=$('files'), go=$('go'), cancel=$('cancel'), status=$('status'), bar=$('bar'), preview=$('preview');
@@ -144,13 +144,24 @@ function loadImage(file){return new Promise((resolve,reject)=>{const url=URL.cre
 function canvasToGray(canvas){const ctx=canvas.getContext('2d',{willReadFrequently:true}),im=ctx.getImageData(0,0,W,H),gray=new Uint8Array(W*H);for(let i=0,j=0;i<im.data.length;i+=4,j++)gray[j]=Math.round(.299*im.data[i]+.587*im.data[i+1]+.114*im.data[i+2]);return gray}
 async function renderLivePreview(){
  const request=++previewRequest;
- if(!selectedFiles.length){preview.style.display='none';return}
+ const previewStatus=$('previewStatus');
+ if(!selectedFiles.length){preview.style.display='none';if(previewStatus)previewStatus.textContent='选择漫画文件夹后，这里会自动显示预览。';return}
+ preview.style.display='block';
+ if(previewStatus)previewStatus.textContent='已读取图片，正在生成第一页预览……';
  const depth=Number($('depth').value),algo=$('dither').value;
  let canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
  let ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
  try{
-  const groups=getGroups().filter(g=>g.files.length);if(!groups.length){preview.style.display='none';return}
-  const group=groups[0],chapter=(group.chapters&&group.chapters.length)?group.chapters[0]:{files:group.files};
+  let group, chapter;
+  try {
+   const groups=getGroups().filter(g=>g.files.length);
+   if(groups.length){group=groups[0];chapter=(group.chapters&&group.chapters.length)?group.chapters[0]:{files:group.files};}
+  } catch(err) { console.warn('预览暂时使用已选图片顺序：',err); }
+  if(!chapter || !chapter.files || !chapter.files.length){
+   const fallback=getOrderedFiles().filter(f=>!isRootCover(f));
+   chapter={files:fallback.length?fallback:getOrderedFiles()};
+  }
+  if(!chapter.files.length){if(previewStatus)previewStatus.textContent='没有可用于预览的图片。';return;}
   let cursorY=0;
   for(const file of chapter.files){
    if(request!==previewRequest)return;
@@ -166,7 +177,8 @@ async function renderLivePreview(){
    }
    img.src='';if(cursorY>=H)break;
   }
- }catch(e){if(request===previewRequest){console.warn('预览生成失败：',e);preview.style.display='none'}}
+  if(request===previewRequest && previewStatus)previewStatus.textContent='预览已更新：当前显示的是按现有设置处理后的第一页。';
+ }catch(e){if(request===previewRequest){console.warn('预览生成失败：',e);if(previewStatus)previewStatus.textContent='预览生成失败：'+(e&&e.message?e.message:'请重新选择图片或刷新页面。');}}
 }
 
 function updateConvertedPreview(sourceCanvas, depth, algo){

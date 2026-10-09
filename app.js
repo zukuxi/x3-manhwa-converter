@@ -1,4 +1,4 @@
-// X3 Manga Image Converter V2.2. Local-only browser processing; stitch vertical strips across source images.
+// X3 Manga Image Converter V2.5. Local-only browser processing; stitch vertical strips across source images.
 const W=528,H=792,$=id=>document.getElementById(id);
 let cancelled=false, selectedFiles=[];
 const folderInput=$('folder'), filesInput=$('files'), go=$('go'), cancel=$('cancel'), status=$('status'), bar=$('bar'), preview=$('preview');
@@ -32,40 +32,105 @@ function setStatus(s,p){status.textContent=s;if(p!=null)bar.style.width=Math.max
 function safeName(s){return (s||'漫画').replace(/[\\/:*?"<>|]/g,'_').trim()||'漫画'}
 function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000)}
 function yieldUI(){return new Promise(r=>setTimeout(r,0))}
-function getGroups(){const mode=$('outputMode').value,files=getOrderedFiles(),chapters=getChapters();if((mode==='chapter'||mode==='range')&&(chapters.length===0||(chapters.length===1&&chapters[0]==='未分章图片')))throw new Error('没有识别到章节文件夹。请重新选择包含各章节子文件夹的漫画总文件夹，并确认上方显示的章节数量；若仍失败，请尝试 Chrome 浏览器。');if(mode==='merge')return [{name:safeName($('bookTitle').value||'漫画'),files}];if(mode==='range'){let a=chapters.indexOf($('fromChapter').value),b=chapters.indexOf($('toChapter').value);if(a<0||b<0)throw new Error('请先选择起止章节。');if(a>b)[a,b]=[b,a];const chosen=new Set(chapters.slice(a,b+1));return [{name:safeName($('bookTitle').value||'漫画')+'_'+safeName(chapters[a])+'-'+safeName(chapters[b]),files:files.filter(f=>!isRootCover(f)&&chosen.has(chapterOf(f)))}]}
- const map=new Map();for(const f of files){if(isRootCover(f))continue;const ch=chapterOf(f);if(!map.has(ch))map.set(ch,[]);map.get(ch).push(f)}const entries=[...map.entries()].sort((a,b)=>collator.compare(a[0],b[0]));return entries.map(([name,fs])=>({name:safeName(name),files:fs}));}
-async function makeBook(group,depth,algo,bookTitle,onProgress){
- const pages=[];let planned=0;
- // First pass counts pages from the combined vertical stream, not per source image.
- for(const f of group.files){if(cancelled)throw new Error('已取消');const im=await loadImage(f);planned+=Math.max(1,Math.ceil(im.naturalHeight*W/im.naturalWidth));im.src='';await yieldUI()}
- planned=Math.max(1,Math.ceil(planned/H));
- let done=0,cursorY=0,canvas,ctx,currentFile=group.files[0];
- function newPage(){canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);cursorY=0}
- async function emitPage(file){
-  const gray=canvasToGray(canvas),processed=dither(gray,W,H,algo,depth);
-  pages.push(depth===2?packXTH(processed,W,H):packXTG(processed,W,H));
-  if(!preview.dataset.shown){preview.src=canvas.toDataURL('image/png');preview.style.display='block';preview.dataset.shown='1'}
-  done++;onProgress?.(done,planned,file||currentFile);canvas.width=1;canvas.height=1;newPage();
-  if(done%2===0)await yieldUI();
- }
- newPage();
- // Stream each scaled image into the current page. A page can contain the tail
- // of one JPG and the beginning of the next, without allocating a giant canvas.
- for(const f of group.files){
-  if(cancelled)throw new Error('已取消');currentFile=f;const img=await loadImage(f);
-  const scaledH=Math.max(1,Math.ceil(img.naturalHeight*W/img.naturalWidth));let offset=0;
-  while(offset<scaledH){
-   if(cancelled)throw new Error('已取消');const chunk=Math.min(H-cursorY,scaledH-offset);
-   const srcY=offset*img.naturalHeight/scaledH,srcH=chunk*img.naturalHeight/scaledH;
-   ctx.drawImage(img,0,srcY,img.naturalWidth,srcH,0,cursorY,W,chunk);
-   cursorY+=chunk;offset+=chunk;
-   if(cursorY===H)await emitPage(f);
+function getGroups() {
+  const mode = $('outputMode').value;
+  const files = getOrderedFiles();
+  const chapters = getChapters();
+  if ((mode === 'chapter' || mode === 'range') &&
+      (chapters.length === 0 || (chapters.length === 1 && chapters[0] === '未分章图片'))) {
+    throw new Error('没有识别到章节文件夹。请重新选择包含章节子文件夹的漫画总文件夹。');
   }
-  img.src='';await yieldUI();
- }
- // Only the very end of the whole chapter/book may have a white remainder.
- if(cursorY>0||pages.length===0)await emitPage(currentFile);
- const data=buildBook(pages,depth===2,bookTitle);return {data,pages:pages.length,files:group.files.length};
+  function makeChapter(name, chapterFiles) {
+    return { name, files: chapterFiles.filter(f => !isRootCover(f))
+      .sort((a, b) => collator.compare(pathOf(a), pathOf(b))) };
+  }
+  const chapterGroups = chapters.map(name => makeChapter(name,
+    files.filter(f => !isRootCover(f) && chapterOf(f) === name)
+  )).filter(ch => ch.files.length > 0);
+  const cover = files.find(isRootCover);
+  if (mode === 'merge') {
+    const segments = [];
+    if ($('includeCover').checked && cover) segments.push({ name: '封面', files: [cover] });
+    segments.push(...chapterGroups);
+    return [{ name: safeName($('bookTitle').value || '漫画'), chapters: segments,
+      files: segments.flatMap(ch => ch.files) }];
+  }
+  if (mode === 'range') {
+    let start = chapters.indexOf($('fromChapter').value);
+    let end = chapters.indexOf($('toChapter').value);
+    if (start < 0 || end < 0) throw new Error('请先选择起始章节和结束章节。');
+    if (start > end) [start, end] = [end, start];
+    const selectedNames = new Set(chapters.slice(start, end + 1));
+    const selected = chapterGroups.filter(ch => selectedNames.has(ch.name));
+    return [{ name: safeName(($('bookTitle').value || '漫画') + '_' + chapters[start] + '-' + chapters[end]),
+      chapters: selected, files: selected.flatMap(ch => ch.files) }];
+  }
+  return chapterGroups.map(ch => ({ name: safeName(ch.name), files: ch.files }));
+}
+
+async function makeBook(group, depth, algo, bookTitle, onProgress) {
+  const pages = [];
+  const chapters = group.chapters || [{ name: group.name, files: group.files }];
+  let planned = 0;
+  // 预估页数时按章节分别向上取整，章节之间不共用页面。
+  for (const chapter of chapters) {
+    let chapterHeight = 0;
+    for (const file of chapter.files) {
+      if (cancelled) throw new Error('已取消');
+      const img = await loadImage(file);
+      chapterHeight += Math.max(1, Math.round(img.naturalHeight * W / img.naturalWidth));
+      img.src = '';
+      await yieldUI();
+    }
+    planned += Math.max(1, Math.ceil(chapterHeight / H));
+  }
+  planned = Math.max(1, planned);
+  let done = 0, cursorY = 0, canvas, ctx, currentFile = null;
+  function newPage() {
+    canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
+    ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); cursorY = 0;
+  }
+  async function emitPage(file) {
+    const gray = canvasToGray(canvas);
+    const processed = dither(gray, W, H, algo, depth);
+    pages.push(depth === 2 ? packXTH(processed, W, H) : packXTG(processed, W, H));
+    if (!preview.dataset.shown) {
+      preview.src = canvas.toDataURL('image/png'); preview.style.display = 'block'; preview.dataset.shown = '1';
+    }
+    done++; onProgress?.(done, planned, file || currentFile);
+    canvas.width = 1; canvas.height = 1; newPage();
+    if (done % 2 === 0) await yieldUI();
+  }
+  newPage();
+  for (const chapter of chapters) {
+    if (cancelled) throw new Error('已取消');
+    for (const file of chapter.files) {
+      if (cancelled) throw new Error('已取消');
+      currentFile = file;
+      const img = await loadImage(file);
+      const scaledHeight = Math.max(1, Math.round(img.naturalHeight * W / img.naturalWidth));
+      let offset = 0;
+      // 逐张图、逐页面拼接；不创建整章超长画布。
+      while (offset < scaledHeight) {
+        if (cancelled) throw new Error('已取消');
+        const chunk = Math.min(H - cursorY, scaledHeight - offset);
+        const sourceY = offset * img.naturalHeight / scaledHeight;
+        const sourceEnd = (offset + chunk) * img.naturalHeight / scaledHeight;
+        ctx.drawImage(img, 0, sourceY, img.naturalWidth, sourceEnd - sourceY,
+          0, cursorY, W, chunk);
+        cursorY += chunk; offset += chunk;
+        if (cursorY === H) await emitPage(file);
+      }
+      img.src = ''; await yieldUI();
+    }
+    // 每章结束时才补白；下一章一定从新页开始。
+    if (cursorY > 0) await emitPage(currentFile);
+    await yieldUI();
+  }
+  if (pages.length === 0) { newPage(); await emitPage(currentFile); }
+  const data = buildBook(pages, depth === 2, bookTitle);
+  return { data, pages: pages.length, files: group.files.length };
 }
 
 function dither(gray,w,h,mode,depth){const a=new Float32Array(gray);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x,old=a[i],v=depth===2?(old<42?0:old<127?85:old<212?170:255):(mode==='none'?(old<128?0:255):(old<128?0:255));a[i]=v;if(mode==='none')continue;const e=old-v;if(mode==='atkinson'){const add=(xx,yy,k=1)=>{if(xx>=0&&xx<w&&yy<h)a[yy*w+xx]+=e*k/8};add(x+1,y);add(x+2,y);add(x-1,y+1);add(x,y+1);add(x+1,y+1);add(x,y+2)}else{const add=(xx,yy,k)=>{if(xx>=0&&xx<w&&yy<h)a[yy*w+xx]+=e*k/16};add(x+1,y,7);add(x-1,y+1,3);add(x,y+1,5);add(x+1,y+1,1)}}return Uint8Array.from(a,v=>Math.max(0,Math.min(255,Math.round(v))))}

@@ -1,4 +1,4 @@
-# X3 Manga Image Converter V2.9
+# X3 Manhwa Image Converter
 
 A browser-based JPG/PNG manga folder to Xteink X3 XTC/XTCH converter.
 
@@ -10,8 +10,6 @@ A browser-based JPG/PNG manga folder to Xteink X3 XTC/XTCH converter.
 - Black-and-white XTC or 4-gray XTCH output.
 - Images are processed locally in the browser; they are not uploaded.
 
-## GitHub Pages
-Upload `index.html`, `app.js`, and this README to the repository root. In Settings → Pages, publish from the `main` branch and `/ (root)`.
 
 ## Important
 - Folder selection support varies by browser/device. If folder selection is unavailable, multi-file selection may lose chapter folder structure.
@@ -29,9 +27,11 @@ Upload `index.html`, `app.js`, and this README to the repository root. In Settin
 - 不再把每张 JPG 独立切页；每章内的图片按自然顺序纵向连续拼接，再切成 528×792 页面。
 - 图片之间不会强行插入白页；只有整章/整本最后一页不足 792 像素时，才在末尾补白。
 - 采用逐段绘制的流式拼接方式，不创建整章超长大画布，以减少内存峰值。
-
+- 实时预览
 
 ## V2.9 图像处理选项
 - 抖动算法新增 Sierra Lite 与 Ordered / Bayer 4×4，保留 Atkinson、Floyd–Steinberg、无抖动。
 - 新增对比度选项：None、Light、Medium、Strong、Maximum；预览和正式转换共用同一处理流程。
 - 支持黑白 XTC 与 4 灰阶 XTCH。不同算法的实际观感会受漫画原图影响，建议先对比第一页预览。
+
+- https://zukuxi.github.io/x3-manhwa-converter/

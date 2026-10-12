@@ -18,7 +18,8 @@ $('fromChapter').addEventListener('change',()=>{updateModeUI();renderLivePreview
 $('toChapter').addEventListener('change',()=>{updateModeUI();renderLivePreview()});
 $('chaptersPerBook').addEventListener('change',()=>{updateModeUI();renderLivePreview()});
 cancel.addEventListener('click',()=>{cancelled=true;cancel.disabled=true;status.textContent+='\n正在取消…'});
-
+// 页面加载时同步生成方式对应的设置区域
+updateModeUI();
 function pathOf(f){return f.webkitRelativePath||f.name}
 function isImage(f){return imageExt.test(f.name)&&(!f.type||f.type.startsWith('image/'))}
 

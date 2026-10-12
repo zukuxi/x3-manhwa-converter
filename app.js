@@ -1,4 +1,3 @@
-
 // X3 Manga Image Converter V3.1. Sequential processing, grouped books and one-time output folder.
 const W=528,H=792,$=id=>document.getElementById(id);
 let cancelled=false, selectedFiles=[], previewRequest=0, converting=false;
@@ -18,8 +17,10 @@ $('fromChapter').addEventListener('change',()=>{updateModeUI();renderLivePreview
 $('toChapter').addEventListener('change',()=>{updateModeUI();renderLivePreview()});
 $('chaptersPerBook').addEventListener('change',()=>{updateModeUI();renderLivePreview()});
 cancel.addEventListener('click',()=>{cancelled=true;cancel.disabled=true;status.textContent+='\n正在取消…'});
+
 // 页面加载时同步生成方式对应的设置区域
 updateModeUI();
+
 function pathOf(f){return f.webkitRelativePath||f.name}
 function isImage(f){return imageExt.test(f.name)&&(!f.type||f.type.startsWith('image/'))}
 
@@ -35,23 +36,42 @@ function acceptFiles(files,fromFolder){
  fillChapterChoices();renderFileStatus();updateModeUI();renderLivePreview();
 }
 
-function isRootCover(f){const p=pathOf(f).split('/');return p[p.length-1].toLowerCase()==='cover.jpg'&&p.length===2}
-function chapterOf(f){const p=pathOf(f).split('/');return p.length>=3?p[1]:(p.length===2&&p[1].toLowerCase()!=='cover.jpg'?p[0]:'未分章图片')}
-function getChapters(){return [...new Set(selectedFiles.filter(f=>!isRootCover(f)).map(chapterOf))].sort((a,b)=>collator.compare(a,b))}
+function isRootCover(f){
+ const p=pathOf(f).split('/');
+ return p[p.length-1].toLowerCase()==='cover.jpg'&&p.length===2;
+}
+
+function chapterOf(f){
+ const p=pathOf(f).split('/');
+ return p.length>=3?p[1]:(p.length===2&&p[1].toLowerCase()!=='cover.jpg'?p[0]:'未分章图片');
+}
+
+function getChapters(){
+ return [...new Set(selectedFiles.filter(f=>!isRootCover(f)).map(chapterOf))]
+  .sort((a,b)=>collator.compare(a,b));
+}
 
 function fillChapterChoices(){
  const chapters=getChapters();
  for(const id of ['fromChapter','toChapter']){
-  const el=$(id),old=el.value;el.innerHTML='';
-  chapters.forEach(ch=>{const o=document.createElement('option');o.value=ch;o.textContent=ch;el.appendChild(o)});
+  const el=$(id),old=el.value;
+  el.innerHTML='';
+  chapters.forEach(ch=>{
+   const o=document.createElement('option');
+   o.value=ch;o.textContent=ch;el.appendChild(o);
+  });
   if(chapters.includes(old))el.value=old;
  }
- if(chapters.length){$('fromChapter').value=chapters[0];$('toChapter').value=chapters[chapters.length-1]}
+ if(chapters.length){
+  $('fromChapter').value=chapters[0];
+  $('toChapter').value=chapters[chapters.length-1];
+ }
 }
 
 function getOrderedFiles(){
  const all=selectedFiles.slice().sort((a,b)=>collator.compare(pathOf(a),pathOf(b)));
- const i=all.findIndex(isRootCover);let cover=null;
+ const i=all.findIndex(isRootCover);
+ let cover=null;
  if(i>=0)cover=all.splice(i,1)[0];
  return $('includeCover').checked&&cover?[cover,...all]:all;
 }
@@ -82,13 +102,20 @@ function setStatus(s,p){
  status.textContent=s;
  if(p!=null)bar.style.width=Math.max(0,Math.min(100,p))+'%';
 }
-function safeName(s){return (s||'漫画').replace(/[\\/:*?"<>|]/g,'_').trim()||'漫画'}
+
+function safeName(s){
+ return (s||'漫画').replace(/[\\/:*?"<>|]/g,'_').trim()||'漫画';
+}
+
 function downloadBlob(blob,name){
  const url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
  setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
-function yieldUI(){return new Promise(r=>setTimeout(r,0))}
+
+function yieldUI(){
+ return new Promise(r=>setTimeout(r,0));
+}
 
 function getGroups(){
  const mode=$('outputMode').value;
@@ -101,7 +128,11 @@ function getGroups(){
  }
 
  function makeChapter(name,chapterFiles){
-  return {name,files:chapterFiles.filter(f=>!isRootCover(f)).sort((a,b)=>collator.compare(pathOf(a),pathOf(b)))};
+  return {
+   name,
+   files:chapterFiles.filter(f=>!isRootCover(f))
+    .sort((a,b)=>collator.compare(pathOf(a),pathOf(b)))
+  };
  }
 
  const chapterGroups=chapters.map(name=>makeChapter(name,
@@ -114,7 +145,11 @@ function getGroups(){
   const segments=[];
   if($('includeCover').checked&&cover)segments.push({name:'封面',files:[cover]});
   segments.push(...chapterGroups);
-  return [{name:safeName($('bookTitle').value||'漫画'),chapters:segments,files:segments.flatMap(ch=>ch.files)}];
+  return [{
+   name:safeName($('bookTitle').value||'漫画'),
+   chapters:segments,
+   files:segments.flatMap(ch=>ch.files)
+  }];
  }
 
  if(mode==='range'){
@@ -156,9 +191,11 @@ async function makeBook(group,depth,algo,contrast,bookTitle,onProgress){
  let doneFiles=0,cursorY=0,canvas,ctx;
 
  function newPage(){
-  canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+  canvas=document.createElement('canvas');
+  canvas.width=W;canvas.height=H;
   ctx=canvas.getContext('2d',{willReadFrequently:true});
-  ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);cursorY=0;
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+  cursorY=0;
  }
 
  async function emitPage(){
@@ -219,7 +256,9 @@ function contrastGray(gray,mode){
  const factor=factors[mode]??1;
  if(factor===1)return new Uint8Array(gray);
  const out=new Uint8Array(gray.length);
- for(let i=0;i<gray.length;i++)out[i]=Math.max(0,Math.min(255,Math.round((gray[i]-127.5)*factor+127.5)));
+ for(let i=0;i<gray.length;i++){
+  out[i]=Math.max(0,Math.min(255,Math.round((gray[i]-127.5)*factor+127.5)));
+ }
  return out;
 }
 
@@ -270,7 +309,11 @@ function dither(gray,w,h,mode,depth,contrast='none'){
 
 function packXTG(px,w,h){
  const rb=Math.ceil(w/8),data=new Uint8Array(rb*h);
- for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(px[y*w+x]>=128)data[y*rb+(x>>3)]|=0x80>>(x&7);
+ for(let y=0;y<h;y++){
+  for(let x=0;x<w;x++){
+   if(px[y*w+x]>=128)data[y*rb+(x>>3)]|=0x80>>(x&7);
+  }
+ }
  return makePage('XTG\0',w,h,data);
 }
 
@@ -285,7 +328,8 @@ function packXTH(px,w,h){
    if(v&2)p1[idx]|=1<<bit;
   }
  }
- const data=new Uint8Array(plane*2);data.set(p0);data.set(p1,plane);
+ const data=new Uint8Array(plane*2);
+ data.set(p0);data.set(p1,plane);
  return makePage('XTH\0',w,h,data);
 }
 
@@ -299,7 +343,7 @@ function makePage(magic,w,h,data){
 }
 
 function md5(input){
- const K=new Uint32Array(64),S=[7,12,17,22,5,9,14,20,4,11,16,23,6,10,15,21];
+ const K=new Uint32Array(64),S=[7,12,17,22,5,9,14,20,4,9,14,20,6,10,15,21];
  for(let i=0;i<64;i++)K[i]=Math.floor(Math.abs(Math.sin(i+1))*4294967296)>>>0;
  const len=input.length,bitLen=len*8,total=((len+9+63)>>6)<<6,msg=new Uint8Array(total);
  msg.set(input);msg[len]=128;
@@ -358,7 +402,10 @@ function loadImage(file){
  return new Promise((resolve,reject)=>{
   const url=URL.createObjectURL(file),img=new Image();
   img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};
-  img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('无法读取图片：'+file.name))};
+  img.onerror=()=>{
+   URL.revokeObjectURL(url);
+   reject(new Error('无法读取图片：'+file.name));
+  };
   img.src=url;
  });
 }
@@ -366,12 +413,16 @@ function loadImage(file){
 function canvasToGray(canvas){
  const ctx=canvas.getContext('2d',{willReadFrequently:true});
  const im=ctx.getImageData(0,0,W,H),gray=new Uint8Array(W*H);
- for(let i=0,j=0;i<im.data.length;i+=4,j++)gray[j]=Math.round(.299*im.data[i]+.587*im.data[i+1]+.114*im.data[i+2]);
+ for(let i=0,j=0;i<im.data.length;i+=4,j++){
+  gray[j]=Math.round(.299*im.data[i]+.587*im.data[i+1]+.114*im.data[i+2]);
+ }
  return gray;
 }
 
+// 预览优化：只读取第一张图片，绘制一次，再执行一次灰度和抖动处理。
 async function renderLivePreview(){
  if(converting)return;
+
  const request=++previewRequest;
  const previewStatus=$('previewStatus');
 
@@ -382,79 +433,126 @@ async function renderLivePreview(){
  }
 
  preview.style.display='block';
- if(previewStatus)previewStatus.textContent='已读取图片，正在生成第一页预览……';
+ if(previewStatus)previewStatus.textContent='正在生成第一页预览……';
 
- const depth=Number($('depth').value),algo=$('dither').value,contrast=$('contrast').value;
- let canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
- let ctx=canvas.getContext('2d',{willReadFrequently:true});
- ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+ const depth=Number($('depth').value);
+ const algo=$('dither').value;
+ const contrast=$('contrast').value;
+
+ let canvas=document.createElement('canvas');
+ canvas.width=W;
+ canvas.height=H;
+
+ const ctx=canvas.getContext('2d',{willReadFrequently:true});
+ ctx.fillStyle='#fff';
+ ctx.fillRect(0,0,W,H);
+
+ let img=null;
 
  try{
-  let group,chapter;
+  let firstFile=null;
+
+  // 按当前生成模式确定预览的第一张图片。
   try{
    const groups=getGroups().filter(g=>g.files.length);
-   if(groups.length){group=groups[0];chapter=(group.chapters&&group.chapters.length)?group.chapters[0]:{files:group.files}}
-  }catch(err){console.warn('预览暂时使用已选图片顺序：',err)}
 
-  if(!chapter||!chapter.files||!chapter.files.length){
-   const fallback=getOrderedFiles().filter(f=>!isRootCover(f));
-   chapter={files:fallback.length?fallback:getOrderedFiles()};
+   if(groups.length){
+    const group=groups[0];
+    const chapter=(group.chapters&&group.chapters.length)
+     ?group.chapters[0]
+     :group;
+
+    if(chapter.files&&chapter.files.length){
+     firstFile=chapter.files[0];
+    }
+   }
+  }catch(err){
+   console.warn('无法按分组获取预览图片，改用已选图片顺序：',err);
   }
 
-  if(!chapter.files.length){
+  // 当前设置无法生成分组时，回退到已选图片顺序。
+  if(!firstFile){
+   const files=getOrderedFiles().filter(f=>!isRootCover(f));
+   firstFile=files[0]||getOrderedFiles()[0]||null;
+  }
+
+  if(!firstFile){
    if(previewStatus)previewStatus.textContent='没有可用于预览的图片。';
+   preview.style.display='none';
    return;
   }
 
-  let cursorY=0;
-  for(const file of chapter.files){
-   if(request!==previewRequest)return;
-   const img=await loadImage(file);
-   if(request!==previewRequest){img.src='';return}
+  if(request!==previewRequest)return;
 
-   const scaledHeight=Math.max(1,Math.round(img.naturalHeight*W/img.naturalWidth));
-   let offset=0;
+  img=await loadImage(firstFile);
 
-   while(offset<scaledHeight&&cursorY<H){
-    if(request!==previewRequest){img.src='';return}
-    const chunk=Math.min(H-cursorY,scaledHeight-offset);
-    const sourceY=offset*img.naturalHeight/scaledHeight;
-    const sourceEnd=(offset+chunk)*img.naturalHeight/scaledHeight;
+  if(request!==previewRequest)return;
 
-    ctx.drawImage(img,0,sourceY,img.naturalWidth,sourceEnd-sourceY,0,cursorY,W,chunk);
-    cursorY+=chunk;offset+=chunk;
-    updateConvertedPreview(canvas,depth,algo,contrast);
-    await yieldUI();
-   }
+  // 宽度超过 528 才缩小；不足 528 不放大。
+  const scale=Math.min(1,W/img.naturalWidth);
+  const drawW=Math.max(1,Math.round(img.naturalWidth*scale));
+  const drawH=Math.max(1,Math.round(img.naturalHeight*scale));
 
-   img.src='';
-   if(cursorY>=H)break;
+  // 从左上角开始绘制，画布边界会裁掉超出页面的右侧和底部。
+  // 不拼接第二张图片，也不把原图强行拉伸到填满页面。
+  ctx.drawImage(img,0,0,drawW,drawH);
+
+  if(request!==previewRequest)return;
+
+  // 只在完整绘制后处理一次预览。
+  updateConvertedPreview(canvas,depth,algo,contrast);
+
+  if(previewStatus){
+   previewStatus.textContent='预览已更新：仅使用第一张图片，显示顶部 X3 页面范围。';
   }
 
-  if(request===previewRequest&&previewStatus)previewStatus.textContent='预览已更新：当前显示的是按现有设置处理后的第一页。';
  }catch(e){
   if(request===previewRequest){
    console.warn('预览生成失败：',e);
-   if(previewStatus)previewStatus.textContent='预览生成失败：'+(e&&e.message?e.message:'请重新选择图片或刷新页面。');
+   if(previewStatus){
+    previewStatus.textContent='预览生成失败：'+
+     (e&&e.message?e.message:'请重新选择图片或刷新页面。');
+   }
   }
+ }finally{
+  if(img)img.src='';
+  canvas.width=1;
+  canvas.height=1;
  }
 }
 
 function updateConvertedPreview(sourceCanvas,depth,algo,contrast){
- const gray=canvasToGray(sourceCanvas),processed=dither(gray,W,H,algo,depth,contrast);
- const out=document.createElement('canvas');out.width=W;out.height=H;
+ const gray=canvasToGray(sourceCanvas);
+ const processed=dither(gray,W,H,algo,depth,contrast);
+ const out=document.createElement('canvas');
+ out.width=W;out.height=H;
  const ctx=out.getContext('2d'),im=ctx.createImageData(W,H);
+
  for(let i=0,j=0;i<processed.length;i++,j+=4){
-  const v=processed[i];im.data[j]=v;im.data[j+1]=v;im.data[j+2]=v;im.data[j+3]=255;
+  const v=processed[i];
+  im.data[j]=v;im.data[j+1]=v;im.data[j+2]=v;im.data[j+3]=255;
  }
- ctx.putImageData(im,0,0);preview.src=out.toDataURL('image/png');preview.style.display='block';preview.dataset.shown='1';
+
+ ctx.putImageData(im,0,0);
+ preview.src=out.toDataURL('image/png');
+ preview.style.display='block';
+ preview.dataset.shown='1';
 }
 
 go.addEventListener('click',async()=>{
  if(!selectedFiles.length||converting)return;
- cancelled=false;converting=true;previewRequest++;go.disabled=true;cancel.disabled=false;bar.style.width='0%';
 
- const depth=Number($('depth').value),algo=$('dither').value,contrast=$('contrast').value,mode=$('outputMode').value;
+ cancelled=false;
+ converting=true;
+ previewRequest++;
+ go.disabled=true;
+ cancel.disabled=false;
+ bar.style.width='0%';
+
+ const depth=Number($('depth').value);
+ const algo=$('dither').value;
+ const contrast=$('contrast').value;
+ const mode=$('outputMode').value;
 
  try{
   const groups=getGroups().filter(g=>g.files.length);
@@ -468,11 +566,15 @@ go.addEventListener('click',async()=>{
     try{
      outputDir=await window.showDirectoryPicker({mode:'readwrite'});
     }catch(err){
-     if(err&&err.name==='AbortError')throw new Error('已取消选择输出文件夹，尚未开始转换。');
+     if(err&&err.name==='AbortError'){
+      throw new Error('已取消选择输出文件夹，尚未开始转换。');
+     }
      throw err;
     }
    }else{
-    if(typeof JSZip==='undefined')throw new Error('ZIP 组件加载失败，无法自动打包。请检查网络后刷新页面。');
+    if(typeof JSZip==='undefined'){
+     throw new Error('ZIP 组件加载失败，无法自动打包。请检查网络后刷新页面。');
+    }
     zipFallback=new JSZip();
     setStatus('当前浏览器不支持选择输出文件夹，将在全部转换完成后下载一个 ZIP。',0);
    }
@@ -481,12 +583,27 @@ go.addEventListener('click',async()=>{
   if(!multipleBooks){
    const g=groups[0];
    setStatus('准备转换：'+g.name,0);
+
    const result=await makeBook(g,depth,algo,contrast,g.name,
-    (done,total,file)=>setStatus('正在转换：'+g.name+'\n当前图片：'+file.name+'\n本书图片：'+done+'/'+total,Math.min(94,94*done/total)));
+    (done,total,file)=>setStatus(
+     '正在转换：'+g.name+'\n当前图片：'+file.name+'\n本书图片：'+done+'/'+total,
+     Math.min(94,94*done/total)
+    )
+   );
 
    setStatus('正在保存文件…',96);
-   downloadBlob(new Blob([result.data],{type:'application/octet-stream'}),g.name+(depth===2?'.xtch':'.xtc'));
-   setStatus('转换完成！\n图片：'+result.files+' 张\nX3 页面：'+result.pages+' 页\n文件大小：'+(result.data.length/1024/1024).toFixed(2)+' MB\n已触发下载。',100);
+   downloadBlob(
+    new Blob([result.data],{type:'application/octet-stream'}),
+    g.name+(depth===2?'.xtch':'.xtc')
+   );
+
+   setStatus(
+    '转换完成！\n图片：'+result.files+' 张\nX3 页面：'+result.pages+
+    ' 页\n文件大小：'+(result.data.length/1024/1024).toFixed(2)+
+    ' MB\n已触发下载。',
+    100
+   );
+
   }else{
    let completed=0,totalPages=0,totalFiles=0;
    const ext=depth===2?'.xtch':'.xtc';
@@ -495,12 +612,22 @@ go.addEventListener('click',async()=>{
     if(cancelled)throw new Error('已取消');
 
     const g=groups[i];
-    setStatus('正在生成第 '+(i+1)+'/'+groups.length+' 本：'+g.name,100*i/groups.length);
+    setStatus(
+     '正在生成第 '+(i+1)+'/'+groups.length+' 本：'+g.name,
+     100*i/groups.length
+    );
 
     let result=await makeBook(g,depth,algo,contrast,g.name,
-     (done,total,file)=>setStatus('正在生成第 '+(i+1)+'/'+groups.length+' 本：'+g.name+'\n当前图片：'+file.name+'\n本书图片：'+done+'/'+total,100*(i+done/Math.max(1,total))/groups.length));
+     (done,total,file)=>setStatus(
+      '正在生成第 '+(i+1)+'/'+groups.length+' 本：'+g.name+
+      '\n当前图片：'+file.name+'\n本书图片：'+done+'/'+total,
+      100*(i+done/Math.max(1,total))/groups.length
+     )
+    );
 
-    totalPages+=result.pages;totalFiles+=result.files;completed++;
+    totalPages+=result.pages;
+    totalFiles+=result.files;
+    completed++;
 
     if(outputDir){
      const handle=await outputDir.getFileHandle(g.name+ext,{create:true});
@@ -511,23 +638,40 @@ go.addEventListener('click',async()=>{
      zipFallback.file(g.name+ext,result.data);
     }
 
-    result.data=null;result=null;
+    result.data=null;
+    result=null;
     await yieldUI();
    }
 
    if(zipFallback){
     setStatus('全部章节已转换，正在生成单个 ZIP…',96);
-    const blob=await zipFallback.generateAsync({type:'blob',compression:'STORE'},m=>setStatus('正在打包 ZIP… '+Math.round(m.percent)+'%',96+4*m.percent/100));
+
+    const blob=await zipFallback.generateAsync(
+     {type:'blob',compression:'STORE'},
+     m=>setStatus(
+      '正在打包 ZIP… '+Math.round(m.percent)+'%',
+      96+4*m.percent/100
+     )
+    );
+
     downloadBlob(blob,safeName($('bookTitle').value||'漫画')+'_全部章节.zip');
     zipFallback=null;
    }
 
-   setStatus('全部完成！\n生成文件：'+completed+' 本\n章节图片：'+totalFiles+' 张\n总 X3 页面：'+totalPages+' 页\n'+(outputDir?'已自动保存到你选择的文件夹。':'已触发一次 ZIP 下载。'),100);
+   setStatus(
+    '全部完成！\n生成文件：'+completed+' 本\n章节图片：'+totalFiles+
+    ' 张\n总 X3 页面：'+totalPages+' 页\n'+
+    (outputDir?'已自动保存到你选择的文件夹。':'已触发一次 ZIP 下载。'),
+    100
+   );
   }
+
  }catch(e){
   setStatus('转换失败：'+(e?.message||e),0);
   console.error(e);
  }finally{
-  converting=false;go.disabled=!getOrderedFiles().length;cancel.disabled=true;
+  converting=false;
+  go.disabled=!getOrderedFiles().length;
+  cancel.disabled=true;
  }
 });

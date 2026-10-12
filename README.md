@@ -1,164 +1,56 @@
-X3 Manhwa Image Converter
+# X3 条漫图片转换器
 
-A browser-based tool for converting manhwa, webtoons, and other comic images into XTC / XTCH files for Xteink X3 and compatible e-readers.
+将条漫图片批量转换为适用于 Xteink X3 等兼容电子阅读器的 XTC / XTCH 文件。
 
-Features
+支持批量导入图片、自动识别章节、按自然数字顺序排列、灵活合并章节，以及批量 ZIP 导出。采用逐张图片、分段填充页面的方式处理长图，避免先创建整章超长画布再切割，减少内存占用。
 
-- Batch import: Select multiple image files or import an entire folder.
-- Chapter detection: Recognizes chapter folders and sorts images in natural numerical order.
-- Flexible output: Export each chapter separately, merge all chapters into one book, or convert a selected chapter range.
-- Batch ZIP export: Package multiple converted books into ZIP archives.
-- Multiple output formats: Supports black-and-white XTC and four-level grayscale XTCH.
-- Dithering options: Atkinson, Floyd–Steinberg, Sierra Lite, Ordered (Bayer 4×4), and None.
-- Contrast adjustment: None, Light, Medium, Strong, and Maximum.
-- Live preview: Preview the conversion effect before processing.
-- Local processing: Images are processed in your browser without needing to upload them to a remote conversion server.
+在线使用： https://zukuxi.github.io/x3-manhwa-converter/
 
-Page Layout
+主要功能
 
-The converter uses streaming, segment-by-segment page packing. It does not create one giant canvas for an entire chapter and then slice it into pages.
-
-1. Images are processed one at a time in natural numerical order and scaled to a width of 528 pixels.
-2. Each image is divided into vertical segments as needed to fill the remaining space on the current 528 × 792 page.
-3. If an image extends beyond the available space, its remaining content continues on the next page.
-4. The next image can fill any remaining space on the current page.
-5. When a page is full, it is output and processing continues on a new page.
-6. At the end of each chapter, the final incomplete page is padded with white. The next chapter always starts on a new page.
-
-This approach avoids creating a giant canvas for an entire chapter and avoids adding unnecessary blank space after every individual image.
-
-Page Dimensions
-
-- Width: 528 pixels
-- Height: 792 pixels
-
-Import and Export
-
-Import
-
-- Select multiple image files.
-- Import an entire folder containing chapter subfolders.
-- Images are sorted in natural numerical order, so filenames such as "1.jpg", "2.jpg", and "10.jpg" are handled in the expected order.
-
-Export
-
-Depending on the available options in the interface, you can:
-
-- Convert each chapter into a separate book.
-- Merge chapters into one book.
-- Convert a selected range of chapters.
-- Export multiple books in ZIP batches.
-
-Image Processing
-
-Dithering Algorithms
-
-- Atkinson
-- Floyd–Steinberg
-- Sierra Lite
-- Ordered (Bayer 4×4)
-- None
-
-Contrast Options
-
-- None
-- Light
-- Medium
-- Strong
-- Maximum
-
-Available options and their effects may vary depending on the selected output format.
-
-How to Use
-
-1. Open the web app.
-2. Select image files or import a folder.
-3. Choose the chapter and output mode.
-4. Select XTC or XTCH and adjust the dithering and contrast settings.
-5. Check the preview.
-6. Start conversion and save the generated files.
-
-Compatibility
-
-Designed for Xteink X3 and compatible e-readers that support the generated XTC / XTCH formats.
-
-Compatibility may depend on the target device's firmware and supported file formats.
-
-Privacy
-
-Image processing takes place in your browser. Images do not need to be uploaded to a remote conversion server.
-
-Credits and License
-
-This project is based on and adapts conversion logic from "srokl/xtcjsapp" (https://github.com/srokl/xtcjsapp), which is licensed under the MIT License.
-
-Please refer to the original repository for its license terms. Additional code and modifications in this repository are subject to their applicable license terms.
-
-
----
-
-X3 条漫图片转换器
-
-一个基于浏览器的漫画转换工具，可将韩漫、条漫及其他漫画图片转换为适用于 Xteink X3 等兼容电子阅读器的 XTC / XTCH 文件。
-
-功能特点
-
-- 批量导入： 支持选择多个图片文件，或导入整个文件夹。
-- 章节识别： 识别章节文件夹，并按自然数字顺序排列图片。
-- 灵活输出： 每章单独生成文件、合并所有章节，或转换指定章节范围。
-- 批量 ZIP 导出： 将多个转换结果打包为 ZIP 文件。
-- 多种输出格式： 支持黑白 XTC 和四级灰度 XTCH。
+- 批量导入图片： 支持一次选择多张图片，也可以导入包含图片的文件夹。
+- 自动识别章节： 根据文件夹结构识别章节，并按自然数字顺序排列图片，避免 "1、10、2" 这样的排序问题。
+- 灵活处理章节： 支持每个章节单独生成文件、合并多个章节，以及选择指定范围进行转换。
+- 批量 ZIP 导出： 可将生成的文件打包为 ZIP，方便一次性保存。
+- 支持 XTC / XTCH：
+  - XTC：黑白显示。
+  - XTCH：四级灰度显示。
 - 多种抖动算法： Atkinson、Floyd–Steinberg、Sierra Lite、Ordered（Bayer 4×4）和 None。
-- 对比度调整： None、Light、Medium、Strong 和 Maximum。
-- 实时预览： 转换前查看效果。
-- 本地处理： 图片在浏览器中处理，无需上传到远程转换服务器。
+- 对比度调节： 支持 None、Light、Medium、Strong 和 Maximum。
+- 实时预览： 调整图像参数时，可以查看转换效果，方便选择适合电子纸屏幕的设置。
+- 浏览器本地处理： 图片转换在浏览器中完成，无需将图片上传到服务器。
 
-分页方式
+长图分页方式
 
-转换器采用逐张图片、分段填充页面的方式，不会先把整章图片拼成一张超长画布再统一切割。
+转换器使用逐张图片、分段处理的分页方式，而不是先将整个章节拼接成一张巨大的长图，再统一切割。
 
-1. 按自然数字顺序逐张处理图片，并将图片缩放至 528 像素宽。
-2. 根据当前页面的剩余空间，将图片分成适当的纵向片段，填入 528 × 792 页面。
-3. 如果一张图片无法完整放入当前页面，剩余部分会继续放到下一页。
-4. 下一张图片可以接着填充当前页面的剩余空间。
-5. 页面填满后立即输出，并在新页面继续处理。
-6. 每章结束时，最后一页不足的部分用白色补齐；下一章始终从新页面开始。
+1. 将图片缩放至宽度 528 像素，同时保持原始纵横比例。
+2. 按顺序逐张读取图片，并将图像内容分段填入尺寸为 528 × 792 像素 的页面。
+3. 当前页面剩余的空间可以继续容纳下一张图片的内容，不会因为每张图片单独分页而产生不必要的空白。
+4. 章节结束时，如果最后一页没有填满，则使用白色补齐。
+5. 下一个章节从新页面开始，不会与上一章节的末尾拼接。
 
-这种方式不需要创建整章的超长画布，也避免了每张图片处理完后都单独补白造成的空间浪费。
+这种处理方式可以避免创建整章超长画布，适合批量转换包含大量长图的章节。
 
-页面尺寸
+输出格式
 
-- 宽度：528 像素
-- 高度：792 像素
+格式| 显示方式
+XTC| 黑白
+XTCH| 四级灰度
 
-导入与导出
-
-导入
-
-- 选择多个图片文件。
-- 导入包含章节子文件夹的整个文件夹。
-- 图片按自然数字顺序排列，例如 "1.jpg"、"2.jpg"、"10.jpg" 会按预期顺序处理。
-
-导出
-
-根据网页界面提供的选项，可以：
-
-- 每章单独转换为一个文件。
-- 将多个章节合并为一个文件。
-- 转换指定范围的章节。
-- 将多个转换结果分批打包为 ZIP 文件。
-
-图像处理
+图像处理选项
 
 抖动算法
 
-- Atkinson
-- Floyd–Steinberg
-- Sierra Lite
-- Ordered（Bayer 4×4）
-- None
+- Atkinson： 适合电子纸显示，呈现具有颗粒感的黑白效果。
+- Floyd–Steinberg： 经典误差扩散算法，适合表现灰度细节。
+- Sierra Lite： 较轻量的误差扩散算法。
+- Ordered (Bayer 4×4)： 规则网点效果。
+- None： 不应用抖动处理。
 
-对比度选项
+对比度
+
+可选择以下级别：
 
 - None
 - Light
@@ -166,29 +58,111 @@ X3 条漫图片转换器
 - Strong
 - Maximum
 
-可用选项及其效果可能因输出格式而异。
+不同的图片、屏幕和显示环境可能适合不同的参数，可以通过实时预览进行比较。
 
 使用方法
 
-1. 打开网页工具。
-2. 选择多个图片文件，或导入整个文件夹。
-3. 选择章节及输出方式。
-4. 选择 XTC 或 XTCH，并调整抖动算法和对比度。
-5. 查看预览效果。
-6. 开始转换并保存生成的文件。
+1. 打开在线转换页面。
+2. 选择图片文件，或导入包含图片的文件夹。
+3. 检查章节识别和图片排序是否正确。
+4. 选择输出格式、章节处理方式、抖动算法及对比度。
+5. 查看预览效果，并按需调整参数。
+6. 开始转换，完成后下载生成的文件或 ZIP 压缩包。
 
-兼容性
+隐私说明
 
-主要面向 Xteink X3 及支持相应 XTC / XTCH 格式的兼容电子阅读器。
+图片处理在浏览器本地完成，无需将图片上传到服务器。实际使用时，浏览器仍需正常加载在线页面及其所依赖的资源。
 
-实际兼容性取决于设备固件及其支持的文件格式。
+许可证与致谢
 
-隐私
+本项目基于 "srokl/xtcjsapp" (https://github.com/srokl/xtcjsapp)（MIT License）进行修改和开发。
 
-图片在浏览器本地处理，无需上传至远程转换服务器。
+感谢原作者提供的开源项目。本项目在此基础上进行了针对图片批量导入、章节处理、长图分页及 XTC / XTCH 转换等方面的改进。
 
-致谢与许可
+原项目的版权声明和 MIT 许可证文本应按照其许可要求保留。请参阅"原项目仓库" (https://github.com/srokl/xtcjsapp)中的许可证文件。
 
-本项目参考并改编了 "srokl/xtcjsapp" (https://github.com/srokl/xtcjsapp) 的转换逻辑。原项目采用 MIT License。
+---
 
-原项目的许可条款请参阅其仓库。本仓库新增或修改的代码应遵守各自适用的许可条款。
+# X3 Image Converter
+
+Batch-convert vertical comic images into XTC / XTCH files for Xteink X3 and compatible e-readers.
+
+The converter supports batch image import, automatic chapter detection, natural numerical sorting, flexible chapter merging, and batch ZIP export. Long images are processed incrementally, avoiding the need to create one enormous canvas for an entire chapter before slicing it into pages.
+
+Live demo: https://zukuxi.github.io/x3-manhwa-converter/
+
+
+Features
+
+- Batch image import: Select multiple images at once or import a folder containing images.
+- Automatic chapter detection: Detect chapters from folder structures and sort images naturally by number.
+- Flexible chapter handling: Export chapters separately, merge multiple chapters, or convert a selected range.
+- Batch ZIP export: Package generated files into a ZIP archive for convenient downloading.
+- XTC / XTCH output:
+  - XTC: Black-and-white output.
+  - XTCH: Four-level grayscale output.
+- Multiple dithering algorithms: Atkinson, Floyd–Steinberg, Sierra Lite, Ordered (Bayer 4×4), and None.
+- Contrast adjustment: None, Light, Medium, Strong, and Maximum.
+- Live preview: Preview conversion results while adjusting image-processing settings.
+- Local browser processing: Images are processed in the browser without uploading them to a server.
+
+Long-Image Pagination
+
+The converter processes images incrementally instead of creating one enormous canvas for an entire chapter before slicing it.
+
+1. Resize each image to a width of 528 pixels while preserving its aspect ratio.
+2. Process images in order and place their content into pages measuring 528 × 792 pixels.
+3. Use the remaining space on the current page for the next image's content when possible.
+4. Pad the final incomplete page of each chapter with white.
+5. Start each new chapter on a fresh page so that content from different chapters is never combined on the same page.
+
+This approach avoids creating extremely tall canvases and helps reduce memory usage when processing chapters containing many long images.
+
+Output Formats
+
+Format| Display
+XTC| Black and white
+XTCH| Four-level grayscale
+
+Image Processing Options
+
+Dithering Algorithms
+
+- Atkinson: Produces a grainy black-and-white appearance that can work well on e-paper displays.
+- Floyd–Steinberg: A classic error-diffusion algorithm for preserving grayscale detail.
+- Sierra Lite: A lightweight error-diffusion algorithm.
+- Ordered (Bayer 4×4): Produces a regular halftone pattern.
+- None: Disables dithering.
+
+Contrast
+
+Available settings:
+
+- None
+- Light
+- Medium
+- Strong
+- Maximum
+
+Use the live preview to compare settings and choose the result best suited to your images and display.
+
+How to Use
+
+1. Open the online converter.
+2. Select multiple image files or import a folder.
+3. Check chapter detection and image ordering.
+4. Choose the output format, chapter handling mode, dithering algorithm, and contrast.
+5. Review the preview and adjust the settings as needed.
+6. Start the conversion and download the generated files or ZIP archive.
+
+Privacy
+
+Image processing takes place locally in the browser. Images do not need to be uploaded to a server. The online page and its dependencies still require a network connection to load.
+
+License and Acknowledgments
+
+This project is based on and modified from "srokl/xtcjsapp" (https://github.com/srokl/xtcjsapp), which is licensed under the MIT License.
+
+Thanks to the original author for making the project open source. This version adds improvements for batch image import, chapter handling, long-image pagination, and XTC / XTCH conversion.
+
+The original copyright notice and MIT License text should be retained in accordance with the applicable license terms. Please refer to the license file in the "original repository" (https://github.com/srokl/xtcjsapp).

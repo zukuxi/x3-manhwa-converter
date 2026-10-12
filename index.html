@@ -5,14 +5,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#10131a">
-<title>皮皮喵漫画图片 → X3 XTC V3.1</title>
+<title>X3条漫图片转换器</title>
 <style>
 :root{color-scheme:dark;--bg:#10131a;--panel:#191f2b;--line:#30394a;--text:#edf2fa;--muted:#a8b3c5;--accent:#8bd5ca}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}.wrap{max-width:860px;margin:auto;padding:22px 14px 44px}h1{font-size:clamp(23px,5vw,32px);line-height:1.25;margin:0 0 9px}.lead,.hint{color:var(--muted)}.lead{margin:0 0 18px}.hint{font-size:13px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:16px;margin:13px 0}.pickers{display:grid;grid-template-columns:1fr;gap:10px}button{background:var(--accent);color:#10201f;border:0;border-radius:10px;padding:12px 15px;font-weight:750;font-size:15px;cursor:pointer}button:disabled{opacity:.45}.secondary{background:#2a3445;color:var(--text)}input[type=file]{display:none}.row{display:flex;gap:12px;flex-wrap:wrap}.field{flex:1;min-width:145px}label{display:block;font-weight:650;margin-bottom:6px}select,input[type=text]{width:100%;padding:11px;border-radius:9px;border:1px solid var(--line);background:#0f141d;color:var(--text);font:inherit}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:13px}.progress{height:8px;background:#0d1118;border-radius:9px;overflow:hidden;margin:10px 0}.bar{height:100%;width:0;background:var(--accent);transition:width .12s}.status{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}.check{display:flex;align-items:center;gap:8px;margin-top:12px}.check input{width:18px;height:18px}#preview{max-width:100%;max-height:420px;border:1px solid var(--line);background:white;display:none}.footer{font-size:12px;color:var(--muted);margin-top:18px}
 </style>
 </head>
 <body>
 <main class="wrap">
-<h1>皮皮喵漫画图片 → X3 XTC V3.1</h1>
+<h1>X3条漫图片转换器</h1>
 <p class="lead">只需选择一次漫画总文件夹。程序逐张读取图片，按章节顺序自动处理；支持每章一本、每 N 章一本或整部合并。支持时可选择一次输出文件夹，自动保存全部成品；否则最后生成一个 ZIP。所有处理都在本机浏览器进行，不会上传图片。</p>
 
 <section class="panel">
@@ -36,7 +36,7 @@
 
 <section class="panel">
 <strong>第一页预览</strong>
-<p id="previewStatus" class="hint">选择漫画文件夹后自动显示预览。只有选图或更改设置时刷新；转换过程中不会逐章重复生成预览。</p>
+<p id="previewStatus" class="hint">选择漫画文件夹后自动显示预览。</p>
 <img id="preview" alt="第一页转换预览">
 </section>
 
@@ -109,7 +109,7 @@
 </select>
 </div>
 </div>
-<p class="hint">条漫分页 V3.1：每章内图片按自然数字顺序连续拼接，再按 528 × 792 切页；图片之间不补白。整部合并或章节范围合并时，也会逐章拼接并在每章末尾结束当前页，绝不会把上一章的剩余空白拿来接下一章。只有每章最后一页不足 792 像素时才在底部补白。预览固定显示最前面一本的第一页，只会在选图或修改设置时更新；转换过程中不再反复刷新预览。转换时每张图片只读取一次。请确认网页标题显示 V3.1；部署后刷新网页并重新选择漫画文件夹。</p>
+<p class="hint"></p>
 <div class="actions">
 <button id="go" disabled>开始转换</button>
 <button id="cancel" class="secondary" disabled>取消</button>
@@ -118,7 +118,7 @@
 <div id="status" class="status">请先选择漫画文件夹。</div>
 </section>
 
-<p class="footer">独立 V2 版本，不会替换原 PDF 转换器或 V1。编码逻辑参考 srokl/xtcjsapp（MIT）及本项目现有实现。请先用少量章节在 Xteink X3 上验证兼容性。</p>
+<p class="footer">编码逻辑参考 srokl/xtcjsapp（MIT）及本项目现有实现。</p>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script type="module" src="./app.js?v=3.2"></script>

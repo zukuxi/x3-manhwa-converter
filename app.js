@@ -1,4 +1,4 @@
-// X3 Manga Image Converter V2.9. More dithering and contrast controls.
+// X3 Manga Image Converter V3.0. Faster chapter processing and fixed first-book preview.
 const W=528,H=792,$=id=>document.getElementById(id);
 let cancelled=false, selectedFiles=[], previewRequest=0;
 const folderInput=$('folder'), filesInput=$('files'), go=$('go'), cancel=$('cancel'), status=$('status'), bar=$('bar'), preview=$('preview');
@@ -74,33 +74,19 @@ function getGroups() {
 async function makeBook(group, depth, algo, contrast, bookTitle, onProgress) {
   const pages = [];
   const chapters = group.chapters || [{ name: group.name, files: group.files }];
-  let planned = 0;
-  // 预估页数时按章节分别向上取整，章节之间不共用页面。
-  for (const chapter of chapters) {
-    let chapterHeight = 0;
-    for (const file of chapter.files) {
-      if (cancelled) throw new Error('已取消');
-      const img = await loadImage(file);
-      chapterHeight += Math.max(1, Math.round(img.naturalHeight * W / img.naturalWidth));
-      img.src = '';
-      await yieldUI();
-    }
-    planned += Math.max(1, Math.ceil(chapterHeight / H));
-  }
-  planned = Math.max(1, planned);
-  let done = 0, cursorY = 0, canvas, ctx, currentFile = null;
+  const totalFiles = Math.max(1, chapters.reduce((n, ch) => n + ch.files.length, 0));
+  let doneFiles = 0, cursorY = 0, canvas, ctx, currentFile = null;
   function newPage() {
     canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
     ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); cursorY = 0;
   }
-  async function emitPage(file) {
+  async function emitPage() {
     const gray = canvasToGray(canvas);
     const processed = dither(gray, W, H, algo, depth, contrast);
     pages.push(depth === 2 ? packXTH(processed, W, H) : packXTG(processed, W, H));
-    done++; onProgress?.(done, planned, file || currentFile);
     canvas.width = 1; canvas.height = 1; newPage();
-    if (done % 2 === 0) await yieldUI();
+    if (pages.length % 2 === 0) await yieldUI();
   }
   newPage();
   for (const chapter of chapters) {
@@ -111,7 +97,7 @@ async function makeBook(group, depth, algo, contrast, bookTitle, onProgress) {
       const img = await loadImage(file);
       const scaledHeight = Math.max(1, Math.round(img.naturalHeight * W / img.naturalWidth));
       let offset = 0;
-      // 逐张图、逐页面拼接；不创建整章超长画布。
+      // 逐张图、逐页面拼接；不创建整章超长画布，也不预先重复读取图片。
       while (offset < scaledHeight) {
         if (cancelled) throw new Error('已取消');
         const chunk = Math.min(H - cursorY, scaledHeight - offset);
@@ -119,18 +105,19 @@ async function makeBook(group, depth, algo, contrast, bookTitle, onProgress) {
         const sourceEnd = (offset + chunk) * img.naturalHeight / scaledHeight;
         ctx.drawImage(img, 0, sourceY, img.naturalWidth, sourceEnd - sourceY,
           0, cursorY, W, chunk);
-        // 第一段图像放入页面后立即显示预览，并按实际输出灰阶/抖动方式处理。
-        if (pages.length === 0) updateConvertedPreview(canvas, depth, algo, contrast);
         cursorY += chunk; offset += chunk;
-        if (cursorY === H) await emitPage(file);
+        if (cursorY === H) await emitPage();
       }
-      img.src = ''; await yieldUI();
+      img.src = '';
+      doneFiles++;
+      onProgress?.(doneFiles, totalFiles, file);
+      await yieldUI();
     }
     // 每章结束时才补白；下一章一定从新页开始。
-    if (cursorY > 0) await emitPage(currentFile);
+    if (cursorY > 0) await emitPage();
     await yieldUI();
   }
-  if (pages.length === 0) { newPage(); await emitPage(currentFile); }
+  if (pages.length === 0) { newPage(); await emitPage(); }
   const data = buildBook(pages, depth === 2, bookTitle);
   return { data, pages: pages.length, files: group.files.length };
 }
@@ -242,14 +229,14 @@ go.addEventListener('click',async()=>{
   if(mode==='chapter'&&typeof JSZip==='undefined')throw new Error('ZIP 组件加载失败，请检查网络后刷新页面。');
   const groups=getGroups().filter(g=>g.files.length);if(!groups.length)throw new Error('所选范围内没有图片。');
   if(mode!=='chapter'){
-   const g=groups[0];setStatus('准备转换：'+g.name,0);const result=await makeBook(g,depth,algo,contrast,g.name,(done,total,file)=>setStatus('正在转换：'+g.name+'\n当前图片：'+file.name+'\n本书页面：'+done+'/'+total,Math.min(94,94*done/total)));
+   const g=groups[0];setStatus('准备转换：'+g.name,0);const result=await makeBook(g,depth,algo,contrast,g.name,(done,total,file)=>setStatus('正在转换：'+g.name+'\n当前图片：'+file.name+'\n本书图片：'+done+'/'+total,Math.min(94,94*done/total)));
    setStatus('正在封装文件…',96);downloadBlob(new Blob([result.data],{type:'application/octet-stream'}),g.name+(depth===2?'.xtch':'.xtc'));
    setStatus('转换完成！\n图片：'+result.files+' 张\nX3 页面：'+result.pages+' 页\n文件大小：'+(result.data.length/1024/1024).toFixed(2)+' MB\n已触发下载。',100);
   }else{
    let batchZip=null,batchCount=0,batchNum=0,completed=0,totalPages=0;const batchSize=batch==='none'?1:Number(batch);const ext=depth===2?'.xtch':'.xtc';
    for(let i=0;i<groups.length;i++){
     if(cancelled)throw new Error('已取消');const g=groups[i];setStatus('正在转换章节 '+(i+1)+'/'+groups.length+'：'+g.name,100*i/groups.length);
-    const result=await makeBook(g,depth,algo,contrast,g.name,(done,total,file)=>setStatus('章节 '+(i+1)+'/'+groups.length+'：'+g.name+'\n当前图片：'+file.name+'\n本章页面：'+done+'/'+total,100*(i+done/Math.max(1,total))/groups.length));
+    const result=await makeBook(g,depth,algo,contrast,g.name,(done,total,file)=>setStatus('正在生成第 '+(i+1)+'/'+groups.length+' 本：'+g.name+'\n当前图片：'+file.name+'\n本书图片：'+done+'/'+total,100*(i+done/Math.max(1,total))/groups.length));
     totalPages+=result.pages;completed++;
     if(batch==='none'){downloadBlob(new Blob([result.data],{type:'application/octet-stream'}),g.name+ext);await new Promise(r=>setTimeout(r,500));}
     else {if(!batchZip)batchZip=new JSZip();batchZip.file(g.name+ext,result.data);batchCount++;if(batchCount===batchSize||i===groups.length-1){batchNum++;setStatus('正在压缩第 '+batchNum+' 个 ZIP（'+batchCount+' 本）…',100*completed/groups.length);const blob=await batchZip.generateAsync({type:'blob',compression:'STORE'},m=>setStatus('正在压缩 ZIP… '+Math.round(m.percent)+'%',100*completed/groups.length));downloadBlob(blob,safeName($('bookTitle').value||'漫画')+'_第'+batchNum+'包_'+batchCount+'本.zip');batchZip=null;batchCount=0;await new Promise(r=>setTimeout(r,700));}}

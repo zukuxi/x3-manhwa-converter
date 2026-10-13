@@ -1,9 +1,9 @@
-
-// X3 Manga Image Converter V3.3
-// Sequential processing, grouped books, image controls and one-time output folder.
+// X3 Manga Image Converter V3.4
+// Sequential processing, grouped books, image controls and arrow-based preview.
 
 const W=528,H=792,$=id=>document.getElementById(id);
 let cancelled=false,selectedFiles=[],previewRequest=0,converting=false;
+let previewImages=[],previewPageIndex=0;
 
 const folderInput=$('folder'),filesInput=$('files'),go=$('go'),
  cancel=$('cancel'),status=$('status'),bar=$('bar'),preview=$('preview');
@@ -19,6 +19,10 @@ folderInput.addEventListener('change',()=>{
 filesInput.addEventListener('change',()=>{
  if(filesInput.files?.length)acceptFiles(Array.from(filesInput.files),false);
 });
+
+$('previewPrev').addEventListener('click',()=>showPreviewPage(previewPageIndex-1));
+$('previewNext').addEventListener('click',()=>showPreviewPage(previewPageIndex+1));
+
 $('includeCover').addEventListener('change',()=>{
  renderFileStatus();renderLivePreview();
 });
@@ -46,6 +50,7 @@ $('toChapter').addEventListener('change',()=>{
 $('chaptersPerBook').addEventListener('change',()=>{
  updateModeUI();renderLivePreview();
 });
+
 cancel.addEventListener('click',()=>{
  cancelled=true;
  cancel.disabled=true;
@@ -55,6 +60,7 @@ cancel.addEventListener('click',()=>{
 updateModeUI();
 
 function pathOf(f){return f.webkitRelativePath||f.name}
+
 function isImage(f){
  return imageExt.test(f.name)&&(!f.type||f.type.startsWith('image/'));
 }
@@ -68,7 +74,8 @@ function acceptFiles(files,fromFolder){
  if(!selectedFiles.length){
   $('fileStatus').textContent='没有找到支持的图片。请确认文件夹中有 JPG、PNG、WebP 等图片。';
   go.disabled=true;
-  preview.style.display='none';
+  previewImages=[];
+  showPreviewPage(0);
   return;
  }
 
@@ -166,7 +173,7 @@ function updateModeUI(){
    ?'逐章读取图片，完成一本后自动继续下一章。支持时可选择一次输出文件夹自动保存；否则最后下载一个 ZIP。'
    :mode==='range'
     ?'范围模式：选择起止章节，将范围内章节合并为一本。'
-    :'分组模式：连续每 N 章生成一本独立 XTC/XTCH，最后不足 N 章也会生成一本。支持时可选择一次输出文件夹自动保存全部成品。';
+    :'分组模式：连续每 N 章生成一本，最后不足 N 章也会生成一本。支持时可选择一次输出文件夹自动保存全部成品。';
 }
 
 function setStatus(s,p){
@@ -676,8 +683,29 @@ function canvasToGray(canvas){
  return gray;
 }
 
-// 预览只取第一张图片；宽度超过 528 才缩小，不向上放大。
-// 只显示顶部 792 像素，不拼接下一张图片。
+// 显示指定的预览页；切换时不重新转换。
+function showPreviewPage(index){
+ if(!previewImages.length){
+  preview.style.display='none';
+  preview.removeAttribute('src');
+  $('previewPageLabel').textContent='第 0 / 0 页';
+  $('previewPrev').disabled=true;
+  $('previewNext').disabled=true;
+  return;
+ }
+
+ previewPageIndex=Math.max(0,Math.min(previewImages.length-1,index));
+ preview.src=previewImages[previewPageIndex];
+ preview.style.display='block';
+
+ $('previewPageLabel').textContent=
+  '第 '+(previewPageIndex+1)+' / '+previewImages.length+' 页';
+
+ $('previewPrev').disabled=previewPageIndex===0;
+ $('previewNext').disabled=previewPageIndex===previewImages.length-1;
+}
+
+// 按正式转换的拼接、分页和章节补白方式生成最多 5 页预览。
 async function renderLivePreview(){
  if(converting)return;
 
@@ -685,15 +713,18 @@ async function renderLivePreview(){
  const previewStatus=$('previewStatus');
 
  if(!selectedFiles.length){
-  preview.style.display='none';
+  previewImages=[];
+  showPreviewPage(0);
   if(previewStatus){
-   previewStatus.textContent='选择漫画文件夹后，这里会自动显示预览。';
+   previewStatus.textContent='选择漫画文件夹后，这里会自动生成预览。';
   }
   return;
  }
 
- preview.style.display='block';
- if(previewStatus)previewStatus.textContent='正在生成第一页预览……';
+ previewImages=[];
+ showPreviewPage(0);
+
+ if(previewStatus)previewStatus.textContent='正在生成前 5 页预览……';
 
  const depth=Number($('depth').value);
  const algo=$('dither').value;
@@ -702,72 +733,150 @@ async function renderLivePreview(){
  const ditherStrength=Number($('ditherStrength').value);
  const threshold=Number($('threshold').value);
 
- const canvas=document.createElement('canvas');
- canvas.width=W;
- canvas.height=H;
-
- const ctx=canvas.getContext('2d',{willReadFrequently:true});
- ctx.fillStyle='#fff';
- ctx.fillRect(0,0,W,H);
-
- let img=null;
+ let canvas=null,ctx=null;
 
  try{
-  let firstFile=null;
+  const groups=getGroups().filter(g=>g.files&&g.files.length);
 
-  try{
-   const groups=getGroups().filter(g=>g.files.length);
+  if(!groups.length){
+   throw new Error('当前设置下没有可预览的图片。');
+  }
 
-   if(groups.length){
-    const group=groups[0];
-    const chapter=(group.chapters&&group.chapters.length)
-     ?group.chapters[0]
-     :group;
+  // 预览当前输出方式下的第一本。
+  const group=groups[0];
+  const chapters=group.chapters&&group.chapters.length
+   ?group.chapters
+   :[{name:group.name||'图片',files:group.files||[]}];
 
-    if(chapter.files&&chapter.files.length){
-     firstFile=chapter.files[0];
-    }
+  canvas=document.createElement('canvas');
+  canvas.width=W;
+  canvas.height=H;
+
+  ctx=canvas.getContext('2d',{willReadFrequently:true});
+  ctx.fillStyle='#fff';
+  ctx.fillRect(0,0,W,H);
+
+  let cursorY=0,finished=false;
+
+  function resetPage(){
+   ctx.fillStyle='#fff';
+   ctx.fillRect(0,0,W,H);
+   cursorY=0;
+  }
+
+  function savePage(){
+   if(previewImages.length>=5)return;
+
+   const gray=canvasToGray(canvas);
+   const processed=dither(
+    gray,W,H,algo,depth,contrast,brightness,ditherStrength,threshold
+   );
+
+   const out=document.createElement('canvas');
+   out.width=W;
+   out.height=H;
+
+   const outCtx=out.getContext('2d');
+   const imageData=outCtx.createImageData(W,H);
+
+   for(let i=0,j=0;i<processed.length;i++,j+=4){
+    const v=processed[i];
+    imageData.data[j]=v;
+    imageData.data[j+1]=v;
+    imageData.data[j+2]=v;
+    imageData.data[j+3]=255;
    }
-  }catch(err){
-   console.warn('无法按分组获取预览图片，改用已选图片顺序：',err);
+
+   outCtx.putImageData(imageData,0,0);
+   previewImages.push(out.toDataURL('image/png'));
+
+   // 缩小临时画布，释放像素缓存。
+   out.width=1;
+   out.height=1;
+
+   resetPage();
+
+   if(previewImages.length>=5)finished=true;
   }
 
-  if(!firstFile){
-   const files=getOrderedFiles().filter(f=>!isRootCover(f));
-   firstFile=files[0]||getOrderedFiles()[0]||null;
-  }
+  for(const chapter of chapters){
+   if(finished||request!==previewRequest)break;
 
-  if(!firstFile){
-   if(previewStatus)previewStatus.textContent='没有可用于预览的图片。';
-   preview.style.display='none';
-   return;
+   for(const file of (chapter.files||[])){
+    if(finished||request!==previewRequest)break;
+
+    const img=await loadImage(file);
+
+    if(request!==previewRequest){
+     img.src='';
+     break;
+    }
+
+    // 与正式转换相同：统一缩放到 528 像素宽。
+    const scaledHeight=Math.max(
+     1,Math.round(img.naturalHeight*W/img.naturalWidth)
+    );
+
+    let offset=0;
+
+    // 图片过长时，剩余部分接到下一页；不重叠、不丢弃。
+    while(offset<scaledHeight&&previewImages.length<5){
+     const chunk=Math.min(H-cursorY,scaledHeight-offset);
+
+     const sourceY=offset*img.naturalHeight/scaledHeight;
+     const sourceEnd=(offset+chunk)*img.naturalHeight/scaledHeight;
+
+     ctx.drawImage(
+      img,
+      0,sourceY,
+      img.naturalWidth,sourceEnd-sourceY,
+      0,cursorY,
+      W,chunk
+     );
+
+     cursorY+=chunk;
+     offset+=chunk;
+
+     if(cursorY===H)savePage();
+    }
+
+    img.src='';
+    await yieldUI();
+   }
+
+   // 每章结束时补白；下一章从新的一页开始。
+   if(!finished&&cursorY>0&&previewImages.length<5){
+    savePage();
+   }
+
+   await yieldUI();
   }
 
   if(request!==previewRequest)return;
 
-  img=await loadImage(firstFile);
+  // 最后不足一页的内容也输出，剩余区域保持白色。
+  if(cursorY>0&&previewImages.length<5){
+   savePage();
+  }
 
-  if(request!==previewRequest)return;
+  if(!previewImages.length){
+   throw new Error('没有生成可预览的页面。');
+  }
 
-  const scale=Math.min(1,W/img.naturalWidth);
-  const drawW=Math.max(1,Math.round(img.naturalWidth*scale));
-  const drawH=Math.max(1,Math.round(img.naturalHeight*scale));
-
-  ctx.drawImage(img,0,0,drawW,drawH);
-
-  if(request!==previewRequest)return;
-
-  updateConvertedPreview(
-   canvas,depth,algo,contrast,brightness,ditherStrength,threshold
-  );
+  showPreviewPage(0);
 
   if(previewStatus){
-   previewStatus.textContent='预览已更新：仅使用第一张图片，显示顶部 X3 页面范围。';
+   previewStatus.textContent=
+    '已生成 '+previewImages.length+
+    ' 页预览，使用当前转换参数；仅预览当前输出设置下的第一本。';
   }
 
  }catch(e){
   if(request===previewRequest){
    console.warn('预览生成失败：',e);
+
+   previewImages=[];
+   showPreviewPage(0);
 
    if(previewStatus){
     previewStatus.textContent='预览生成失败：'+
@@ -775,38 +884,13 @@ async function renderLivePreview(){
    }
   }
  }finally{
-  if(img)img.src='';
-  canvas.width=1;
-  canvas.height=1;
+  if(canvas){
+   canvas.width=1;
+   canvas.height=1;
+  }
+  ctx=null;
+  canvas=null;
  }
-}
-
-function updateConvertedPreview(
- sourceCanvas,depth,algo,contrast,brightness,ditherStrength,threshold
-){
- const gray=canvasToGray(sourceCanvas);
- const processed=dither(
-  gray,W,H,algo,depth,contrast,brightness,ditherStrength,threshold
- );
-
- const out=document.createElement('canvas');
- out.width=W;
- out.height=H;
-
- const ctx=out.getContext('2d'),im=ctx.createImageData(W,H);
-
- for(let i=0,j=0;i<processed.length;i++,j+=4){
-  const v=processed[i];
-  im.data[j]=v;
-  im.data[j+1]=v;
-  im.data[j+2]=v;
-  im.data[j+3]=255;
- }
-
- ctx.putImageData(im,0,0);
- preview.src=out.toDataURL('image/png');
- preview.style.display='block';
- preview.dataset.shown='1';
 }
 
 go.addEventListener('click',async()=>{
@@ -815,6 +899,7 @@ go.addEventListener('click',async()=>{
  cancelled=false;
  converting=true;
  previewRequest++;
+
  go.disabled=true;
  cancel.disabled=false;
  bar.style.width='0%';
@@ -850,6 +935,7 @@ go.addEventListener('click',async()=>{
     }
 
     zipFallback=new JSZip();
+
     setStatus(
      '当前浏览器不支持选择输出文件夹，将在全部转换完成后下载一个 ZIP。',
      0

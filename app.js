@@ -1067,3 +1067,148 @@ go.addEventListener('click',async()=>{
   cancel.disabled=true;
  }
 });
+
+
+// ===== 中英文界面切换：不修改转换算法 =====
+(() => {
+  const zh = document.getElementById('langZh');
+  const en = document.getElementById('langEn');
+
+  if (!zh || !en) return;
+
+  const translations = [
+    ['X3条漫图片转换器', 'X3 Manhwa Image Converter'],
+    ['只需选择一次漫画总文件夹。程序逐张读取图片，按章节顺序自动处理；支持每章一本、每 N 章一本或整部合并。支持时可选择一次输出文件夹，自动保存全部成品；否则最后生成一个 ZIP。所有处理都在本机浏览器进行，不会上传图片。',
+     'Select the manga folder once. Images are processed sequentially in chapter order. Create one book per chapter, combine every N chapters, or merge the entire series. Where supported, choose an output folder to save all books; otherwise, download one ZIP. All processing happens locally in your browser. Images are never uploaded.'],
+    ['① 选择漫画', '① Select Manga'],
+    ['请选择包含各章节子文件夹的漫画总文件夹，目录结构应为“漫画名/章节文件夹/图片”。选择后请确认识别到的章节数量；如果显示“未分章图片”或章节数为 0，说明浏览器没有提供完整目录路径，无法自动分章，请换 Chrome 再试。',
+     'Select the main manga folder containing chapter subfolders. The structure should be “Manga name / Chapter folder / Images”. Check the detected chapter count after selecting. If it shows “Unsorted images” or zero chapters, your browser may not provide the full folder path. Try Chrome.'],
+    ['选择整个漫画文件夹', 'Select Manga Folder'],
+    ['备用：多选图片文件', 'Alternative: Select Image Files'],
+    ['漫画名（可修改）', 'Book Title (editable)'],
+    ['自动使用文件夹名称', 'Uses folder name automatically'],
+    ['如果有根目录 Cover.jpg，在整部合并模式下作为第一页', 'Use root Cover.jpg as the first page when merging the entire series'],
+    ['尚未选择漫画。', 'No manga selected.'],
+    ['前 5 页预览', 'Preview First 5 Pages'],
+    ['选择漫画文件夹后自动生成预览，可用左右箭头查看前 5 页。', 'A preview is generated after selecting a folder. Use the arrows to view up to 5 pages.'],
+    ['第 0 / 0 页', 'Page 0 / 0'],
+    ['② 输出方式', '② Output Options'],
+    ['生成方式', 'Output Mode'],
+    ['每章单独一本（默认）', 'One book per chapter (default)'],
+    ['整部合并成一本', 'Merge entire series into one book'],
+    ['指定章节范围合并', 'Merge selected chapter range'],
+    ['每 N 章合并成一本', 'Combine every N chapters'],
+    ['输出格式', 'Output Format'],
+    ['4 灰阶（XTCH）', '4-level grayscale (XTCH)'],
+    ['黑白（XTC）', 'Black and white (XTC)'],
+    ['从章节', 'From Chapter'],
+    ['到章节', 'To Chapter'],
+    ['每本包含章节数', 'Chapters per Book'],
+    ['每 1 章一本', '1 chapter per book'],
+    ['每 2 章一本', '2 chapters per book'],
+    ['每 5 章一本', '5 chapters per book'],
+    ['每 10 章一本', '10 chapters per book'],
+    ['每 20 章一本', '20 chapters per book'],
+    ['③ 转换设置', '③ Conversion Settings'],
+    ['抖动算法', 'Dithering Algorithm'],
+    ['对比度', 'Contrast'],
+    ['亮度', 'Brightness'],
+    ['负值变暗，正值变亮；默认 0。', 'Negative values darken; positive values brighten. Default: 0.'],
+    ['抖动强度', 'Dithering Strength'],
+    ['控制误差扩散的强弱；0% 不扩散误差，100% 使用完整算法强度。Ordered 和无抖动模式不使用误差扩散。',
+     'Controls error diffusion strength. 0% disables diffusion; 100% uses full strength. Ordered and No Dithering modes do not use error diffusion.'],
+    ['黑白阈值', 'Black-and-White Threshold'],
+    ['仅在黑白（XTC）模式下生效。数值较低时更容易变白，较高时更容易变黑。',
+     'Only applies to black-and-white (XTC) mode. Lower values produce more white; higher values produce more black.'],
+    ['开始转换', 'Start Conversion'],
+    ['取消', 'Cancel'],
+    ['请先选择漫画文件夹。', 'Please select a manga folder first.'],
+    ['编码逻辑参考 srokl/xtcjsapp（MIT）及本项目现有实现。',
+     'Encoding logic is based on srokl/xtcjsapp (MIT) and this project’s existing implementation.']
+  ];
+
+  const originalTexts = new Map();
+
+  function collectTextNodes(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    let node;
+    while ((node = walker.nextNode())) {
+      if (node.parentElement?.closest('.language-switch')) continue;
+      if (node.nodeValue.trim()) nodes.push(node);
+    }
+    return nodes;
+  }
+
+  function translateText(value, toEnglish) {
+    let result = value;
+    for (const [chinese, english] of translations) {
+      if (toEnglish) {
+        if (result.includes(chinese)) {
+          result = result.replaceAll(chinese, english);
+        }
+      } else {
+        if (result.includes(english)) {
+          result = result.replaceAll(english, chinese);
+        }
+      }
+    }
+    return result;
+  }
+
+  function setLanguage(language) {
+    const toEnglish = language === 'en';
+    document.documentElement.lang = toEnglish ? 'en' : 'zh-CN';
+    zh.classList.toggle('active', !toEnglish);
+    en.classList.toggle('active', toEnglish);
+
+    for (const node of collectTextNodes(document.body)) {
+      if (!originalTexts.has(node)) originalTexts.set(node, node.nodeValue);
+      const original = originalTexts.get(node);
+      node.nodeValue = translateText(original, toEnglish);
+    }
+
+    document.title = toEnglish
+      ? 'X3 Manhwa Image Converter'
+      : 'X3条漫图片转换器';
+
+    const prev = document.getElementById('previewPrev');
+    const next = document.getElementById('previewNext');
+    if (prev) prev.setAttribute('aria-label', toEnglish ? 'Previous page' : '上一页');
+    if (next) next.setAttribute('aria-label', toEnglish ? 'Next page' : '下一页');
+
+    try {
+      localStorage.setItem('x3-manhwa-language', language);
+    } catch (_) {}
+  }
+
+  zh.addEventListener('click', () => setLanguage('zh'));
+  en.addEventListener('click', () => setLanguage('en'));
+
+  let saved = 'zh';
+  try {
+    saved = localStorage.getItem('x3-manhwa-language') || 'zh';
+  } catch (_) {}
+
+  setLanguage(saved === 'en' ? 'en' : 'zh');
+
+  // 让转换过程中新出现的状态文字也尝试翻译。
+  const observer = new MutationObserver(records => {
+    const toEnglish = document.documentElement.lang === 'en';
+    for (const record of records) {
+      if (record.type === 'characterData') {
+        const node = record.target;
+        if (!originalTexts.has(node)) originalTexts.set(node, node.nodeValue);
+        const original = originalTexts.get(node);
+        const translated = translateText(original, toEnglish);
+        if (node.nodeValue !== translated) node.nodeValue = translated;
+      }
+    }
+  });
+
+  observer.observe(document.body, {
+    subtree: true,
+    characterData: true
+  });
+})();
+

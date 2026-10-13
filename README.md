@@ -1,7 +1,7 @@
 
 # X3 条漫图片转换器
 
-将条漫图片批量转换为适用于 Xteink X3 等兼容电子阅读器的 XTC / XTCH 文件。
+将条漫图片批量转换为适用于 Xteink X3 的 XTC / XTCH 文件。
 
 本项目基于浏览器运行，支持批量导入图片、自动识别章节、自然数字排序、灵活合并章节，以及批量输出。采用逐张图片、分段填充页面的方式处理长图，无需预先创建整章超长画布。
 
@@ -110,7 +110,7 @@
 
 # X3 Image Converter
 
-Batch-convert vertical comic images into XTC / XTCH files for Xteink X3 and compatible e-readers.
+Batch-convert vertical comic images into XTC / XTCH files for Xteink X3.
 
 This browser-based tool supports batch image import, automatic chapter detection, natural numerical sorting, flexible chapter merging, and batch output. Long images are processed incrementally into fixed-size pages without first creating one enormous canvas for an entire chapter.
 

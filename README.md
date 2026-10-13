@@ -1,9 +1,9 @@
 
-# Xteink X3 Manhwa Folder to XTC Converter
+# Xteink X3 Manhwa Folder to XTC Converter (Manhwa or Webtoon only)
 
 将长条韩漫（Manhwa / Webtoon）图片文件夹批量转换为适用于 **Xteink X3** 的 **XTC / XTCH** 文件。支持自动识别章节、自然数字排序、按指定章节数合并成一本书，以及在浏览器中直接保存转换结果。
 
-**在线转换:** https://zukuxi.github.io/xteink-manga-folder-to-xtc/
+**在线转换:** https://zukuxi.github.io/xteink-manhwa-folder-to-xtc/
 
 **无需安装软件。** 图片在浏览器本地处理，无需上传到转换服务器。
 
@@ -72,7 +72,7 @@
 
 ## 使用方法
 
-1. 打开 [在线转换网页](https://zukuxi.github.io/xteink-manga-folder-to-xtc/)。
+1. 打开 [在线转换网页](https://zukuxi.github.io/xteink-manhwa-folder-to-xtc/)。
 2. 选择包含章节子文件夹的图片目录，或选择多张图片。
 3. 选择输出格式：XTC 或 XTCH。
 4. 选择章节合并方式，例如每章一本或每 5 章一本。
@@ -97,7 +97,7 @@
 
 Batch-convert **manhwa / webtoon image folders** into **XTC / XTCH** files for the **Xteink X3**. Import chapter folders, sort images naturally, combine a chosen number of chapters into one book, and save the output directly from your browser.
 
-**Online Converter:** https://zukuxi.github.io/xteink-manga-folder-to-xtc/
+**Online Converter:** https://zukuxi.github.io/xteink-manhwa-folder-to-xtc/
 
 **No installation required.** Images are processed locally in your browser and do not need to be uploaded to a conversion server.
 
@@ -164,7 +164,7 @@ Choose from None, Light, Medium, Strong, and Maximum. Different comics and sourc
 
 ## How to Use
 
-1. Open the [Online converter](https://zukuxi.github.io/xteink-manga-folder-to-xtc/).
+1. Open the [Online converter](https://zukuxi.github.io/xteink-manhwa-folder-to-xtc/).
 2. Select a folder containing chapter folders, or select multiple images.
 3. Choose XTC or XTCH output.
 4. Choose how chapters should be grouped, such as one book per chapter or one book per five chapters.

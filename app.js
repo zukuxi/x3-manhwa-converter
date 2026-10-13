@@ -1,8 +1,9 @@
-// X3 Manga Image Converter V3.4
+
+// X3 Manga Image Converter V3.5
 // Sequential processing, grouped books, image controls and arrow-based preview.
 
 const W=528,H=792,$=id=>document.getElementById(id);
-let cancelled=false,selectedFiles=[],previewRequest=0,converting=false;
+let cancelled=false,selectedFiles=[],previewRequest=0,converting=false,previewBuilding=false;
 let previewImages=[],previewPageIndex=0;
 
 const folderInput=$('folder'),filesInput=$('files'),go=$('go'),
@@ -29,15 +30,15 @@ $('includeCover').addEventListener('change',()=>{
 $('outputMode').addEventListener('change',()=>{
  updateModeUI();renderLivePreview();
 });
-$('depth').addEventListener('change',renderLivePreview);
-$('dither').addEventListener('change',renderLivePreview);
-$('contrast').addEventListener('change',renderLivePreview);
+$('depth').addEventListener('change',updateCurrentPreview);
+$('dither').addEventListener('change',updateCurrentPreview);
+$('contrast').addEventListener('change',updateCurrentPreview);
 
 for(const id of ['brightness','ditherStrength','threshold']){
  $(id).addEventListener('input',()=>{
   const value=$(id).value;
   $(id+'Value').textContent=id==='ditherStrength'?value+'%':value;
-  renderLivePreview();
+  updateCurrentPreview();
  });
 }
 
@@ -74,6 +75,8 @@ function acceptFiles(files,fromFolder){
  if(!selectedFiles.length){
   $('fileStatus').textContent='没有找到支持的图片。请确认文件夹中有 JPG、PNG、WebP 等图片。';
   go.disabled=true;
+  previewRequest++;
+  previewBuilding=false;
   previewImages=[];
   showPreviewPage(0);
   return;
@@ -683,7 +686,56 @@ function canvasToGray(canvas){
  return gray;
 }
 
-// 显示指定的预览页；切换时不重新转换。
+// 对缓存的当前页灰度图应用最新参数；不重新读取文件。
+function renderCurrentPreviewPage(){
+ if(!previewImages.length)return;
+ const gray=previewImages[previewPageIndex];
+ if(!gray)return;
+
+ const depth=Number($('depth').value);
+ const algo=$('dither').value;
+ const contrast=$('contrast').value;
+ const brightness=Number($('brightness').value);
+ const ditherStrength=Number($('ditherStrength').value);
+ const threshold=Number($('threshold').value);
+ const processed=dither(
+  gray,W,H,algo,depth,contrast,brightness,ditherStrength,threshold
+ );
+
+ const out=document.createElement('canvas');
+ out.width=W;
+ out.height=H;
+ const outCtx=out.getContext('2d');
+ const imageData=outCtx.createImageData(W,H);
+
+ for(let i=0,j=0;i<processed.length;i++,j+=4){
+  const v=processed[i];
+  imageData.data[j]=v;
+  imageData.data[j+1]=v;
+  imageData.data[j+2]=v;
+  imageData.data[j+3]=255;
+ }
+
+ outCtx.putImageData(imageData,0,0);
+ const nextSrc=out.toDataURL('image/png');
+ // 直到新预览生成完才替换，旧图不会先消失。
+ preview.src=nextSrc;
+ preview.style.display='block';
+ preview.dataset.shown='1';
+ out.width=1;
+ out.height=1;
+}
+
+function updateCurrentPreview(){
+ // 调整图像参数时只重绘当前页，保留当前页码与现有预览。
+ if(previewBuilding)return;
+ if(!previewImages.length){
+  renderLivePreview();
+  return;
+ }
+ renderCurrentPreviewPage();
+}
+
 function showPreviewPage(index){
  if(!previewImages.length){
   preview.style.display='none';
@@ -695,17 +747,14 @@ function showPreviewPage(index){
  }
 
  previewPageIndex=Math.max(0,Math.min(previewImages.length-1,index));
- preview.src=previewImages[previewPageIndex];
- preview.style.display='block';
-
  $('previewPageLabel').textContent=
   '第 '+(previewPageIndex+1)+' / '+previewImages.length+' 页';
-
  $('previewPrev').disabled=previewPageIndex===0;
  $('previewNext').disabled=previewPageIndex===previewImages.length-1;
+ renderCurrentPreviewPage();
 }
 
-// 按正式转换的拼接、分页和章节补白方式生成最多 5 页预览。
+// 按正式转换的拼接、分页和章节补白方式生成最多 5 页原始灰度预览。
 async function renderLivePreview(){
  if(converting)return;
 
@@ -713,6 +762,7 @@ async function renderLivePreview(){
  const previewStatus=$('previewStatus');
 
  if(!selectedFiles.length){
+  previewBuilding=false;
   previewImages=[];
   showPreviewPage(0);
   if(previewStatus){
@@ -721,17 +771,11 @@ async function renderLivePreview(){
   return;
  }
 
+ previewBuilding=true;
  previewImages=[];
  showPreviewPage(0);
 
  if(previewStatus)previewStatus.textContent='正在生成前 5 页预览……';
-
- const depth=Number($('depth').value);
- const algo=$('dither').value;
- const contrast=$('contrast').value;
- const brightness=Number($('brightness').value);
- const ditherStrength=Number($('ditherStrength').value);
- const threshold=Number($('threshold').value);
 
  let canvas=null,ctx=null;
 
@@ -766,36 +810,8 @@ async function renderLivePreview(){
 
   function savePage(){
    if(previewImages.length>=5)return;
-
-   const gray=canvasToGray(canvas);
-   const processed=dither(
-    gray,W,H,algo,depth,contrast,brightness,ditherStrength,threshold
-   );
-
-   const out=document.createElement('canvas');
-   out.width=W;
-   out.height=H;
-
-   const outCtx=out.getContext('2d');
-   const imageData=outCtx.createImageData(W,H);
-
-   for(let i=0,j=0;i<processed.length;i++,j+=4){
-    const v=processed[i];
-    imageData.data[j]=v;
-    imageData.data[j+1]=v;
-    imageData.data[j+2]=v;
-    imageData.data[j+3]=255;
-   }
-
-   outCtx.putImageData(imageData,0,0);
-   previewImages.push(out.toDataURL('image/png'));
-
-   // 缩小临时画布，释放像素缓存。
-   out.width=1;
-   out.height=1;
-
+   previewImages.push(canvasToGray(canvas));
    resetPage();
-
    if(previewImages.length>=5)finished=true;
   }
 
@@ -890,6 +906,7 @@ async function renderLivePreview(){
   }
   ctx=null;
   canvas=null;
+  if(request===previewRequest)previewBuilding=false;
  }
 }
 

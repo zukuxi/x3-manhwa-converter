@@ -7,7 +7,36 @@
 <meta name="theme-color" content="#10131a">
 <title>X3条漫图片转换器</title>
 <style>
-:root{color-scheme:dark;--bg:#10131a;--panel:#191f2b;--line:#30394a;--text:#edf2fa;--muted:#a8b3c5;--accent:#8bd5ca}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}.wrap{max-width:860px;margin:auto;padding:22px 14px 44px}h1{font-size:clamp(23px,5vw,32px);line-height:1.25;margin:0 0 9px}.lead,.hint{color:var(--muted)}.lead{margin:0 0 18px}.hint{font-size:13px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:16px;margin:13px 0}.pickers{display:grid;grid-template-columns:1fr;gap:10px}button{background:var(--accent);color:#10201f;border:0;border-radius:10px;padding:12px 15px;font-weight:750;font-size:15px;cursor:pointer}button:disabled{opacity:.45}.secondary{background:#2a3445;color:var(--text)}input[type=file]{display:none}.row{display:flex;gap:12px;flex-wrap:wrap}.field{flex:1;min-width:145px}label{display:block;font-weight:650;margin-bottom:6px}select,input[type=text]{width:100%;padding:11px;border-radius:9px;border:1px solid var(--line);background:#0f141d;color:var(--text);font:inherit}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:13px}.progress{height:8px;background:#0d1118;border-radius:9px;overflow:hidden;margin:10px 0}.bar{height:100%;width:0;background:var(--accent);transition:width .12s}.status{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}.check{display:flex;align-items:center;gap:8px;margin-top:12px}.check input{width:18px;height:18px}#preview{max-width:100%;max-height:420px;border:1px solid var(--line);background:white;display:none}.footer{font-size:12px;color:var(--muted);margin-top:18px}
+:root{color-scheme:dark;--bg:#10131a;--panel:#191f2b;--line:#30394a;--text:#edf2fa;--muted:#a8b3c5;--accent:#8bd5ca}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:860px;margin:auto;padding:22px 14px 44px}
+h1{font-size:clamp(23px,5vw,32px);line-height:1.25;margin:0 0 9px}
+.lead,.hint{color:var(--muted)}
+.lead{margin:0 0 18px}
+.hint{font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:16px;margin:13px 0}
+.pickers{display:grid;grid-template-columns:1fr;gap:10px}
+button{background:var(--accent);color:#10201f;border:0;border-radius:10px;padding:12px 15px;font-weight:750;font-size:15px;cursor:pointer}
+button:disabled{opacity:.45}
+.secondary{background:#2a3445;color:var(--text)}
+input[type=file]{display:none}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.field{flex:1;min-width:145px}
+label{display:block;font-weight:650;margin-bottom:6px}
+select,input[type=text]{width:100%;padding:11px;border-radius:9px;border:1px solid var(--line);background:#0f141d;color:var(--text);font:inherit}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:13px}
+.progress{height:8px;background:#0d1118;border-radius:9px;overflow:hidden;margin:10px 0}
+.bar{height:100%;width:0;background:var(--accent);transition:width .12s}
+.status{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
+.check{display:flex;align-items:center;gap:8px;margin-top:12px}
+.check input{width:18px;height:18px}
+#preview{max-width:100%;max-height:420px;border:1px solid var(--line);background:white;display:none}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.range-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.range-value{color:var(--accent);font-variant-numeric:tabular-nums;font-weight:700}
+.range-field{margin-top:14px}
+.footer{font-size:12px;color:var(--muted);margin-top:18px}
 </style>
 </head>
 <body>
@@ -109,7 +138,34 @@
 </select>
 </div>
 </div>
-<p class="hint"></p>
+
+<div class="range-field">
+<div class="range-head">
+<label for="brightness">亮度</label>
+<span id="brightnessValue" class="range-value">0</span>
+</div>
+<input id="brightness" type="range" min="-50" max="50" step="1" value="0">
+<p class="hint">负值变暗，正值变亮；默认 0。</p>
+</div>
+
+<div class="range-field">
+<div class="range-head">
+<label for="ditherStrength">抖动强度</label>
+<span id="ditherStrengthValue" class="range-value">100%</span>
+</div>
+<input id="ditherStrength" type="range" min="0" max="100" step="5" value="100">
+<p class="hint">控制误差扩散的强弱；0% 不扩散误差，100% 使用完整算法强度。Ordered 和无抖动模式不使用误差扩散。</p>
+</div>
+
+<div class="range-field">
+<div class="range-head">
+<label for="threshold">黑白阈值</label>
+<span id="thresholdValue" class="range-value">128</span>
+</div>
+<input id="threshold" type="range" min="64" max="192" step="1" value="128">
+<p class="hint">仅在黑白（XTC）模式下生效。数值较低时更容易变白，较高时更容易变黑。</p>
+</div>
+
 <div class="actions">
 <button id="go" disabled>开始转换</button>
 <button id="cancel" class="secondary" disabled>取消</button>
@@ -121,6 +177,6 @@
 <p class="footer">编码逻辑参考 srokl/xtcjsapp（MIT）及本项目现有实现。</p>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script type="module" src="./app.js?v=3.2"></script>
+<script type="module" src="./app.js?v=3.3"></script>
 </body>
 </html>

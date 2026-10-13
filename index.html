@@ -31,8 +31,6 @@ select,input[type=text]{width:100%;padding:11px;border-radius:9px;border:1px sol
 .status{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
 .check{display:flex;align-items:center;gap:8px;margin-top:12px}
 .check input{width:18px;height:18px}
-
-/* 左右箭头 + 单页预览 */
 .preview-viewer{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px}
 .preview-page-wrap{flex:1;min-width:0;max-width:360px;text-align:center}
 .preview-page-label{font-size:13px;color:var(--muted);margin-bottom:8px}
@@ -40,20 +38,29 @@ select,input[type=text]{width:100%;padding:11px;border-radius:9px;border:1px sol
 .preview-nav{flex:0 0 42px;width:42px;height:54px;padding:0;border:1px solid var(--line);border-radius:10px;background:#2a3445;color:var(--text);font-size:32px;line-height:1;cursor:pointer}
 .preview-nav:disabled{opacity:.35;cursor:default}
 @media(max-width:420px){
- .preview-viewer{gap:6px}
- .preview-nav{flex-basis:34px;width:34px;height:46px}
- .preview-page-wrap{max-width:calc(100% - 80px)}
+.preview-viewer{gap:6px}
+.preview-nav{flex-basis:34px;width:34px;height:46px}
+.preview-page-wrap{max-width:calc(100% - 80px)}
 }
-
 input[type=range]{width:100%;accent-color:var(--accent)}
 .range-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .range-value{color:var(--accent);font-variant-numeric:tabular-nums;font-weight:700}
 .range-field{margin-top:14px}
 .footer{font-size:12px;color:var(--muted);margin-top:18px}
+.language-switch{display:flex;justify-content:flex-end;gap:6px;margin-bottom:14px}
+.language-switch button{padding:7px 12px;font-size:13px}
+.language-switch button.active{background:var(--accent);color:#10201f}
+.language-switch button:not(.active){background:#2a3445;color:var(--text)}
 </style>
 </head>
 <body>
 <main class="wrap">
+
+<div class="language-switch" aria-label="Language">
+<button type="button" id="langZh" class="active">中文</button>
+<button type="button" id="langEn">English</button>
+</div>
+
 <h1>X3条漫图片转换器</h1>
 <p class="lead">只需选择一次漫画总文件夹。程序逐张读取图片，按章节顺序自动处理；支持每章一本、每 N 章一本或整部合并。支持时可选择一次输出文件夹，自动保存全部成品；否则最后生成一个 ZIP。所有处理都在本机浏览器进行，不会上传图片。</p>
 
@@ -80,12 +87,12 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <strong>前 5 页预览</strong>
 <p id="previewStatus" class="hint">选择漫画文件夹后自动生成预览，可用左右箭头查看前 5 页。</p>
 <div class="preview-viewer">
- <button id="previewPrev" type="button" class="preview-nav" aria-label="上一页" disabled>‹</button>
- <div class="preview-page-wrap">
-  <div id="previewPageLabel" class="preview-page-label">第 0 / 0 页</div>
-  <img id="preview" alt="转换后的 X3 页面预览">
- </div>
- <button id="previewNext" type="button" class="preview-nav" aria-label="下一页" disabled>›</button>
+<button id="previewPrev" type="button" class="preview-nav" aria-label="上一页" disabled>‹</button>
+<div class="preview-page-wrap">
+<div id="previewPageLabel" class="preview-page-label">第 0 / 0 页</div>
+<img id="preview" alt="转换后的 X3 页面预览">
+</div>
+<button id="previewNext" type="button" class="preview-nav" aria-label="下一页" disabled>›</button>
 </div>
 </section>
 
@@ -196,7 +203,8 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 
 <p class="footer">编码逻辑参考 srokl/xtcjsapp（MIT）及本项目现有实现。</p>
 </main>
+
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script type="module" src="./app.js?v=3.5"></script>
+<script type="module" src="./app.js?v=3.6"></script>
 </body>
 </html>

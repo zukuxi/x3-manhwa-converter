@@ -3,7 +3,7 @@
 
 将长条韩漫（Manhwa / Webtoon）图片文件夹批量转换为适用于 **Xteink X3** 的 **XTC / XTCH** 文件。支持自动识别章节、自然数字排序、按指定章节数合并成一本书，以及在浏览器中直接保存转换结果。
 
-**GitHub Repository:** https://github.com/zukuxi/xteink-manga-folder-to-xtc
+**在线转换:** https://zukuxi.github.io/xteink-manga-folder-to-xtc/
 
 **无需安装软件。** 图片在浏览器本地处理，无需上传到转换服务器。
 
@@ -72,14 +72,12 @@
 
 ## 使用方法
 
-1. 打开 [GitHub 仓库](https://github.com/zukuxi/xteink-manga-folder-to-xtc)。
-2. 如果已启用 GitHub Pages，打开项目的在线转换页面。
-3. 选择包含章节子文件夹的图片目录，或选择多张图片。
-4. 检查章节识别结果和图片排序。
-5. 选择输出格式：XTC 或 XTCH。
-6. 选择章节合并方式，例如每章一本或每 5 章一本。
-7. 选择抖动算法和对比度，并查看预览。
-8. 开始转换。如果浏览器支持直接保存到文件夹，按提示选择一次输出目录；否则使用 ZIP 备用导出。
+1. 打开 [在线转换网页](https://zukuxi.github.io/xteink-manga-folder-to-xtc/)。
+2. 选择包含章节子文件夹的图片目录，或选择多张图片。
+3. 选择输出格式：XTC 或 XTCH。
+4. 选择章节合并方式，例如每章一本或每 5 章一本。
+5. 选择抖动算法和对比度，并查看预览。
+6. 开始转换。如果浏览器支持直接保存到文件夹，按提示选择一次输出目录；否则使用 ZIP 备用导出。
 
 ## 隐私
 
@@ -99,7 +97,7 @@
 
 Batch-convert **manhwa / webtoon image folders** into **XTC / XTCH** files for the **Xteink X3**. Import chapter folders, sort images naturally, combine a chosen number of chapters into one book, and save the output directly from your browser.
 
-**GitHub Repository:** https://github.com/zukuxi/xteink-manga-folder-to-xtc
+**Online Converter:** https://zukuxi.github.io/xteink-manga-folder-to-xtc/
 
 **No installation required.** Images are processed locally in your browser and do not need to be uploaded to a conversion server.
 
@@ -166,14 +164,12 @@ Choose from None, Light, Medium, Strong, and Maximum. Different comics and sourc
 
 ## How to Use
 
-1. Open the [GitHub repository](https://github.com/zukuxi/xteink-manga-folder-to-xtc).
-2. Open the online converter if GitHub Pages is enabled for the project.
-3. Select a folder containing chapter folders, or select multiple images.
-4. Check the detected chapters and image order.
-5. Choose XTC or XTCH output.
-6. Choose how chapters should be grouped, such as one book per chapter or one book per five chapters.
-7. Select a dithering algorithm and contrast setting, then review the preview.
-8. Start conversion. If your browser supports direct folder output, select the output directory when prompted. Otherwise, use ZIP export.
+1. Open the [Online converter](https://zukuxi.github.io/xteink-manga-folder-to-xtc/).
+2. Select a folder containing chapter folders, or select multiple images.
+3. Choose XTC or XTCH output.
+4. Choose how chapters should be grouped, such as one book per chapter or one book per five chapters.
+5. Select a dithering algorithm and contrast setting, then review the preview.
+6. Start conversion. If your browser supports direct folder output, select the output directory when prompted. Otherwise, use ZIP export.
 
 ## Privacy
 

@@ -1,5 +1,5 @@
 
-# Xteink X3 Manhwa Folder to XTC Converter (Manhwa or Webtoon only)
+# Xteink X3 Manhwa Folder to XTC Converter (Long-strip comic only)
 
 将长条韩漫（Manhwa / Webtoon）图片文件夹批量转换为适用于 **Xteink X3** 的 **XTC / XTCH** 文件。支持自动识别章节、自然数字排序、按指定章节数合并成一本书，以及在浏览器中直接保存转换结果。
 
